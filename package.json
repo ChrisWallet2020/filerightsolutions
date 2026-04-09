@@ -1,0 +1,31 @@
+{
+  "name": "tax-service-site",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && prisma db push && next build",
+    "start": "next start",
+    "prisma:push": "npx prisma db push",
+    "prisma:seed": "npx prisma db seed"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.18.0",
+    "bcryptjs": "^2.4.3",
+    "crypto-js": "^4.2.0",
+    "next": "^14.2.35",
+    "nodemailer": "^6.9.14",
+    "pdf-lib": "^1.17.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "prisma": "^5.18.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

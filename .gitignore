@@ -1,0 +1,14 @@
+# Dependencies & build
+node_modules/
+.next/
+out/
+
+# Env (secrets)
+.env
+.env.local
+.env.*.local
+
+# SQLite local DB (optional — remove if you want to track dev.db)
+*.db
+*.db-journal
+.vercel
