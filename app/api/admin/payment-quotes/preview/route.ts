@@ -143,6 +143,7 @@ export async function POST(req: Request) {
 </head>
 <body>
   <a class="backBtn" href="/admin/billing">← Back to Billing</a>
+  <span class="muted" style="margin-left:10px;">Tip: you can close this tab — the form stays open in the other tab.</span>
   <h1>Billing Email Preview</h1>
   <div class="muted topline">No email sent. No quote created. This is a content preview only.</div>
   <div class="card">

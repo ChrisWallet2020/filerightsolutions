@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { config } from "@/lib/config";
 import { isAdminAuthed } from "@/lib/auth";
+import { BillingQuoteForm } from "./BillingQuoteForm";
 
 export default async function AdminBillingPage({
   searchParams,
@@ -15,7 +15,6 @@ export default async function AdminBillingPage({
   const emailed = searchParams.emailed === "1";
   const emailFailed = searchParams.emailError === "1";
   const emailDev = searchParams.emailDev === "1";
-  const baseUrl = String(config.baseUrl).replace(/\/$/, "");
 
   const previewErrorMessage =
     previewError === "user_not_found"
@@ -79,55 +78,7 @@ export default async function AdminBillingPage({
         </div>
       ) : null}
 
-      <div className="checkoutGrid" style={{ marginTop: 22, gridTemplateColumns: "1fr", maxWidth: 760 }}>
-        <div className="checkoutBox">
-          <h2>Create quote</h2>
-          <form method="post" action="/api/admin/payment-quotes" className="form" encType="multipart/form-data">
-            <label>
-              Client email (must match registered account)
-              <input name="userEmail" type="email" required placeholder="client@example.com" />
-            </label>
-            <label>
-              Service Fee (PHP)
-              <input name="baseAmountPhp" type="number" min={1} step={1} required placeholder="3500" />
-            </label>
-            <label>
-              Note to client (optional, shown on payment page)
-              <textarea
-                name="clientNote"
-                rows={3}
-                placeholder="e.g. 1701A amendment — as discussed"
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 12 }}
-              />
-            </label>
-            <label>
-              Internal memo (optional, not shown to client)
-              <textarea
-                name="adminMemo"
-                rows={2}
-                placeholder="For your records only"
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 12 }}
-              />
-            </label>
-            <label>
-              Expires in days (optional)
-              <input name="expiresInDays" type="number" min={1} max={365} placeholder="Leave blank for no expiry" />
-            </label>
-            <label>
-              Billing attachment image
-              <input name="billingAttachment" type="file" accept="image/*" />
-            </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <button type="submit" className="btn btnSecondary" formAction="/api/admin/payment-quotes/preview">
-                Preview billing email
-              </button>
-              <button type="submit" className="btn" formAction="/api/admin/payment-quotes/send">
-                Send billing email
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <BillingQuoteForm />
     </section>
   );
 }
