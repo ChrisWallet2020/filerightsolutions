@@ -1,5 +1,8 @@
 import type { NextRequest } from "next/server";
 
+/** HttpOnly cookie: where to send the user after successful login (set by /api/auth/prepare-login). */
+export const LOGIN_RETURN_TO_COOKIE = "login_return_to";
+
 /**
  * Allow only same-site relative paths after login (mitigate open redirects).
  * Accepts paths like /account/payment or /account/payment?q=token.

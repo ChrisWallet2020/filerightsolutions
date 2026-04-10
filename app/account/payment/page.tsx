@@ -26,7 +26,7 @@ export default async function AccountPaymentPage({
     const dest = token
       ? `/account/payment?q=${encodeURIComponent(token)}`
       : "/account/payment";
-    redirect(`/login?next=${encodeURIComponent(dest)}`);
+    redirect(`/api/auth/prepare-login?next=${encodeURIComponent(dest)}`);
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -34,7 +34,7 @@ export default async function AccountPaymentPage({
     const dest = token
       ? `/account/payment?q=${encodeURIComponent(token)}`
       : "/account/payment";
-    redirect(`/login?next=${encodeURIComponent(dest)}`);
+    redirect(`/api/auth/prepare-login?next=${encodeURIComponent(dest)}`);
   }
 
   if (!token) {

@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import type { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { config } from "./config";
 import { ADMIN_SESSION_COOKIE, USER_SESSION_COOKIE, parseSignedSession } from "./session";
@@ -46,15 +47,23 @@ export function isAdminAuthed(): boolean {
    CUSTOMER SESSION (Phase 1)
 ========================= */
 
+const userSessionCookieOpts = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 14,
+};
+
 export function setUserSession(userId: string) {
   const value = `${userId}.${sign(userId)}`;
-  cookies().set(USER_SESSION_COOKIE, value, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 14,
-  });
+  cookies().set(USER_SESSION_COOKIE, value, userSessionCookieOpts);
+}
+
+/** Use in Route Handlers when returning NextResponse.redirect so Set-Cookie is on the same response. */
+export function applyUserSessionToResponse(response: NextResponse, userId: string) {
+  const value = `${userId}.${sign(userId)}`;
+  response.cookies.set(USER_SESSION_COOKIE, value, userSessionCookieOpts);
 }
 
 export function clearUserSession() {

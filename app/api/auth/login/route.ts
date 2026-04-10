@@ -1,8 +1,13 @@
+import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { setUserSession } from "@/lib/auth";
-import { absoluteUrlForInternalPath, safePostLoginPath } from "@/lib/postLoginRedirect";
+import { applyUserSessionToResponse } from "@/lib/auth";
+import {
+  absoluteUrlForInternalPath,
+  LOGIN_RETURN_TO_COOKIE,
+  safePostLoginPath,
+} from "@/lib/postLoginRedirect";
 
 function loginUrlWithError(request: NextRequest, code: string, preserveNext?: string | null) {
   const u = request.nextUrl.clone();
@@ -30,9 +35,21 @@ export async function POST(request: NextRequest) {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath));
 
-    setUserSession(user.id);
-    const to = nextPath || "/account";
-    return NextResponse.redirect(absoluteUrlForInternalPath(request, to));
+    const jar = cookies();
+    const cookieRaw = jar.get(LOGIN_RETURN_TO_COOKIE)?.value;
+    const fromCookie = cookieRaw ? safePostLoginPath(cookieRaw) : null;
+    const to = fromCookie || nextPath || "/account";
+
+    const res = NextResponse.redirect(absoluteUrlForInternalPath(request, to));
+    applyUserSessionToResponse(res, user.id);
+    res.cookies.set(LOGIN_RETURN_TO_COOKIE, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 0,
+    });
+    return res;
   } catch (err) {
     console.error("LOGIN_ERROR:", err);
     const u = request.nextUrl.clone();
