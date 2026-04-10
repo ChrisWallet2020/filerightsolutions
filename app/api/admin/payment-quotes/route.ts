@@ -8,16 +8,6 @@ const Schema = z.object({
   userEmail: z.string().email(),
   baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
   clientNote: z.string().max(2000).optional().or(z.literal("")),
-  adminMemo: z.string().max(2000).optional().or(z.literal("")),
-  expiresInDays: z
-    .union([z.string(), z.number()])
-    .optional()
-    .transform((v) => {
-      if (v === undefined || v === null || v === "") return undefined;
-      const n = typeof v === "number" ? v : Number(String(v).trim());
-      if (!Number.isFinite(n) || n < 1 || n > 365) return undefined;
-      return Math.floor(n);
-    }),
 });
 
 export async function POST(req: Request) {
@@ -39,7 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { userEmail, baseAmountPhp, clientNote, adminMemo, expiresInDays } = parsed.data;
+  const { userEmail, baseAmountPhp, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({ where: { email } });
@@ -47,15 +37,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "user_not_found" }, { status: 404 });
   }
 
-  const expiresAt =
-    expiresInDays != null ? new Date(Date.now() + expiresInDays * 86400000) : null;
-
   const { token } = await createPaymentQuoteAdmin({
     userId: user.id,
     baseAmountPhp,
     clientNote: clientNote?.trim() || null,
-    adminMemo: adminMemo?.trim() || null,
-    expiresAt,
+    adminMemo: null,
+    expiresAt: null,
   });
 
   const redir = new URL("/admin/billing", req.url);

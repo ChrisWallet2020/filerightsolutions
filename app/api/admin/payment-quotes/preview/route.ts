@@ -3,6 +3,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
 import { config } from "@/lib/config";
+import {
+  collectBillingImagesFromFormData,
+  type CollectedBillingImage,
+} from "@/lib/admin/billingAttachments";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 
@@ -10,15 +14,6 @@ const Schema = z.object({
   userEmail: z.string().email(),
   baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
   clientNote: z.string().max(2000).optional().or(z.literal("")),
-  expiresInDays: z
-    .union([z.string(), z.number()])
-    .optional()
-    .transform((v) => {
-      if (v === undefined || v === null || v === "") return undefined;
-      const n = typeof v === "number" ? v : Number(String(v).trim());
-      if (!Number.isFinite(n) || n < 1 || n > 365) return undefined;
-      return Math.floor(n);
-    }),
 });
 
 function esc(s: string) {
@@ -46,36 +41,23 @@ export async function POST(req: Request) {
 
   const ct = req.headers.get("content-type") || "";
   let raw: Record<string, unknown>;
-  let uploadedAttachment:
-    | {
-        filename: string;
-        content: Buffer;
-        contentType: string;
-      }
-    | null = null;
+  let uploadedImages: CollectedBillingImage[] = [];
   if (ct.includes("application/json")) {
     raw = await req.json().catch(() => ({}));
   } else {
     const form = await req.formData();
     raw = Object.fromEntries(form.entries());
-    const file = form.get("billingAttachment");
-    if (file instanceof File && file.size > 0) {
-      if (!file.type.startsWith("image/")) {
-        return ct.includes("application/json")
-          ? new NextResponse("Attachment must be an image file.", { status: 400 })
-          : redirectBillingError(req, "attachment_type");
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        return ct.includes("application/json")
-          ? new NextResponse("Attachment too large. Max size is 10MB.", { status: 400 })
-          : redirectBillingError(req, "attachment_size");
-      }
-      uploadedAttachment = {
-        filename: file.name || "billing-attachment",
-        content: Buffer.from(await file.arrayBuffer()),
-        contentType: file.type || "application/octet-stream",
-      };
+    const imgResult = await collectBillingImagesFromFormData(form);
+    if (imgResult.ok === false) {
+      const msg =
+        imgResult.error === "attachment_type"
+          ? "Images must be image files."
+          : "Each image must be 10MB or smaller.";
+      return ct.includes("application/json")
+        ? new NextResponse(msg, { status: 400 })
+        : redirectBillingError(req, imgResult.error);
     }
+    uploadedImages = imgResult.images;
   }
 
   const parsed = Schema.safeParse(raw);
@@ -85,7 +67,7 @@ export async function POST(req: Request) {
       : redirectBillingError(req, "invalid_form");
   }
 
-  const { userEmail, baseAmountPhp, clientNote, expiresInDays } = parsed.data;
+  const { userEmail, baseAmountPhp, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -93,8 +75,6 @@ export async function POST(req: Request) {
       ? new NextResponse("User not found for provided email.", { status: 404 })
       : redirectBillingError(req, "user_not_found");
   }
-
-  const expiresAt = expiresInDays != null ? new Date(Date.now() + expiresInDays * 86400000) : null;
   const confirmedCredits = await prisma.referralEvent.count({
     where: { referrerId: user.id, evaluationCompleted: true },
   });
@@ -112,15 +92,23 @@ export async function POST(req: Request) {
     percentPerCredit: config.referralFeeReductionPercent,
     payUrl,
     clientNote: clientNote?.trim() || null,
-    expiresAt,
+    expiresAt: null,
   });
 
-  const attachment = uploadedAttachment || built.attachments[0];
-  const attachmentText = attachment ? attachmentToText(attachment.content) : "(no attachment)";
-  const isImageAttachment = Boolean(attachment?.contentType?.startsWith("image/"));
-  const imagePreviewSrc = isImageAttachment
-    ? `data:${attachment!.contentType};base64,${Buffer.from(attachment!.content).toString("base64")}`
-    : "";
+  const summaryAttachment = built.attachments[0];
+  const summaryText = summaryAttachment ? attachmentToText(summaryAttachment.content) : "(no summary)";
+  const attachmentList = [
+    ...uploadedImages.map((a) => a.filename),
+    summaryAttachment?.filename || "summary.txt",
+  ];
+  const imageBlocks = uploadedImages
+    .map(
+      (img) =>
+        `<div class="card" style="margin-bottom:12px;"><p><b>${esc(img.filename)}</b></p><img src="data:${esc(
+          img.contentType || "image/png"
+        )};base64,${Buffer.from(img.content).toString("base64")}" alt="" style="max-width:100%;height:auto;border-radius:8px;" /></div>`
+    )
+    .join("");
 
   const html = `<!doctype html>
 <html>
@@ -149,17 +137,20 @@ export async function POST(req: Request) {
   <div class="card">
     <div><b>To:</b> ${esc(user.email)}</div>
     <div><b>Subject:</b> ${esc(built.subject)}</div>
-    <div><b>Attachment:</b> ${esc(attachment?.filename || "N/A")}</div>
+    <div><b>Attachments:</b> ${esc(attachmentList.join(", "))}</div>
   </div>
   <h2>Plain Text Body</h2>
   <div class="card"><pre>${esc(built.textBody)}</pre></div>
   <div class="divider"></div>
-  <h2>Attachment Preview</h2>
+  <h2>Your billing images (as sent)</h2>
   ${
-    isImageAttachment
-      ? `<div class="card"><img src="${imagePreviewSrc}" alt="Attachment preview" style="max-width:100%;height:auto;border-radius:8px;" /></div>`
-      : `<div class="card"><pre>${esc(attachmentText)}</pre></div>`
+    uploadedImages.length
+      ? imageBlocks
+      : `<div class="card muted">No images attached.</div>`
   }
+  <div class="divider"></div>
+  <h2>Billing summary file (.txt)</h2>
+  <div class="card"><pre>${esc(summaryText)}</pre></div>
   <div class="divider"></div>
   <h2>HTML Email Rendering</h2>
   <iframe srcdoc="${esc(built.htmlBody)}"></iframe>

@@ -3,6 +3,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
 import { config } from "@/lib/config";
+import {
+  collectBillingImagesFromFormData,
+  type CollectedBillingImage,
+} from "@/lib/admin/billingAttachments";
 import { createPaymentQuoteAdmin } from "@/lib/admin/paymentQuoteCreate";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
@@ -12,16 +16,6 @@ const Schema = z.object({
   userEmail: z.string().email(),
   baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
   clientNote: z.string().max(2000).optional().or(z.literal("")),
-  adminMemo: z.string().max(2000).optional().or(z.literal("")),
-  expiresInDays: z
-    .union([z.string(), z.number()])
-    .optional()
-    .transform((v) => {
-      if (v === undefined || v === null || v === "") return undefined;
-      const n = typeof v === "number" ? v : Number(String(v).trim());
-      if (!Number.isFinite(n) || n < 1 || n > 365) return undefined;
-      return Math.floor(n);
-    }),
 });
 
 export async function POST(req: Request) {
@@ -31,32 +25,19 @@ export async function POST(req: Request) {
 
   const ct = req.headers.get("content-type") || "";
   let raw: Record<string, unknown>;
-  let uploadedAttachment:
-    | {
-        filename: string;
-        content: Buffer;
-        contentType: string;
-      }
-    | null = null;
+  let uploadedImages: CollectedBillingImage[] = [];
   if (ct.includes("application/json")) {
     raw = await req.json().catch(() => ({}));
   } else {
     const form = await req.formData();
     raw = Object.fromEntries(form.entries());
-    const file = form.get("billingAttachment");
-    if (file instanceof File && file.size > 0) {
-      if (!file.type.startsWith("image/")) {
-        return NextResponse.json({ error: "attachment_must_be_image" }, { status: 400 });
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        return NextResponse.json({ error: "attachment_too_large_max_10mb" }, { status: 400 });
-      }
-      uploadedAttachment = {
-        filename: file.name || "billing-attachment",
-        content: Buffer.from(await file.arrayBuffer()),
-        contentType: file.type || "application/octet-stream",
-      };
+    const imgResult = await collectBillingImagesFromFormData(form);
+    if (imgResult.ok === false) {
+      const err =
+        imgResult.error === "attachment_type" ? "attachment_must_be_image" : "attachment_too_large_max_10mb";
+      return NextResponse.json({ error: err }, { status: 400 });
     }
+    uploadedImages = imgResult.images;
   }
 
   const parsed = Schema.safeParse(raw);
@@ -64,7 +45,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { userEmail, baseAmountPhp, clientNote, adminMemo, expiresInDays } = parsed.data;
+  const { userEmail, baseAmountPhp, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({ where: { email } });
@@ -72,15 +53,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "user_not_found" }, { status: 404 });
   }
 
-  const expiresAt =
-    expiresInDays != null ? new Date(Date.now() + expiresInDays * 86400000) : null;
-
   const { token } = await createPaymentQuoteAdmin({
     userId: user.id,
     baseAmountPhp,
     clientNote: clientNote?.trim() || null,
-    adminMemo: adminMemo?.trim() || null,
-    expiresAt,
+    adminMemo: null,
+    expiresAt: null,
   });
 
   const confirmedCredits = await prisma.referralEvent.count({
@@ -100,9 +78,9 @@ export async function POST(req: Request) {
     percentPerCredit: config.referralFeeReductionPercent,
     payUrl,
     clientNote: clientNote?.trim() || null,
-    expiresAt,
+    expiresAt: null,
   });
-  const emailAttachments = uploadedAttachment ? [uploadedAttachment] : attachments;
+  const emailAttachments = [...uploadedImages, ...attachments];
 
   let emailSent = false;
   let emailError = false;

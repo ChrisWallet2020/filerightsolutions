@@ -22,9 +22,9 @@ export default async function AdminBillingPage({
       : previewError === "invalid_form"
         ? "Preview failed: please check required fields and try again."
         : previewError === "attachment_type"
-          ? "Preview failed: billing attachment must be an image file."
+          ? "Preview failed: billing images must be image files."
           : previewError === "attachment_size"
-            ? "Preview failed: billing attachment is too large (max 10MB)."
+            ? "Preview failed: each image must be 10MB or smaller."
             : "";
 
   return (
@@ -32,7 +32,7 @@ export default async function AdminBillingPage({
       <h1>Billing &amp; quotes</h1>
       <p className="muted">
         Enter the client&apos;s registered email and total service fee. <b>Send billing email</b> creates the quote and
-        sends the payment email using your provided values and optional attachment.
+        sends the payment email. You can attach up to three images if needed.
       </p>
 
       {emailFailed ? (
@@ -64,10 +64,9 @@ export default async function AdminBillingPage({
       {emailed && !emailFailed && !emailDev ? (
         <div className="notice" style={{ marginTop: 14, borderColor: "#bbf7d0", background: "#f0fdf4" }}>
           <strong>Billing email sent</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            Your mail server accepted the message. If the client (or you) do not see it, check spam/promotions,
-            search by subject, and verify <code>SMTP_*</code> / SPF in Vercel logs (<code>BILLING_QUOTE_EMAIL_OK</code>).
-            Set <code>SMTP_BCC</code> in your deployment env to receive a blind copy of each billing send.
+          <p style={{ margin: "8px 0 0", color: "#166534", lineHeight: 1.6 }}>
+            The client should receive the message shortly. If they don&apos;t see it, ask them to check spam or
+            promotions and search by subject. You can copy the new payment link below to send manually if needed.
           </p>
         </div>
       ) : null}

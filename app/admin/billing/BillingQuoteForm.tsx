@@ -5,8 +5,8 @@ import { useRef, useState } from "react";
 const PREVIEW_ERR: Record<string, string> = {
   user_not_found: "Preview failed: no registered account matches the client email.",
   invalid_form: "Preview failed: please check required fields and try again.",
-  attachment_type: "Preview failed: billing attachment must be an image file.",
-  attachment_size: "Preview failed: billing attachment is too large (max 10MB).",
+  attachment_type: "Preview failed: billing images must be image files (JPEG, PNG, etc.).",
+  attachment_size: "Preview failed: each image must be 10MB or smaller.",
 };
 
 export function BillingQuoteForm() {
@@ -104,23 +104,21 @@ export function BillingQuoteForm() {
               style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 12 }}
             />
           </label>
-          <label>
-            Internal memo (optional, not shown to client)
-            <textarea
-              name="adminMemo"
-              rows={2}
-              placeholder="For your records only"
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 12 }}
-            />
-          </label>
-          <label>
-            Expires in days (optional)
-            <input name="expiresInDays" type="number" min={1} max={365} placeholder="Leave blank for no expiry" />
-          </label>
-          <label>
-            Billing attachment image
-            <input name="billingAttachment" type="file" accept="image/*" />
-          </label>
+          <div style={{ display: "grid", gap: 10 }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Billing images (optional, up to 3)</span>
+            <label style={{ fontSize: 14, color: "#475569" }}>
+              Image 1
+              <input name="billingAttachment1" type="file" accept="image/*" style={{ marginTop: 6, display: "block" }} />
+            </label>
+            <label style={{ fontSize: 14, color: "#475569" }}>
+              Image 2
+              <input name="billingAttachment2" type="file" accept="image/*" style={{ marginTop: 6, display: "block" }} />
+            </label>
+            <label style={{ fontSize: 14, color: "#475569" }}>
+              Image 3
+              <input name="billingAttachment3" type="file" accept="image/*" style={{ marginTop: 6, display: "block" }} />
+            </label>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             <button type="button" className="btn btnSecondary" disabled={previewing} onClick={handlePreview}>
               {previewing ? "Opening preview…" : "Preview billing email"}
