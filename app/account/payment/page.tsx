@@ -11,31 +11,40 @@ export const metadata = {
   title: "Payment",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AccountPaymentPage({
   searchParams,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
+  const qRaw = searchParams.q;
+  const token = typeof qRaw === "string" ? qRaw.trim() : "";
+
   const userId = getAuthedUserId();
   if (!userId) {
-    redirect("/login");
+    const dest = token
+      ? `/account/payment?q=${encodeURIComponent(token)}`
+      : "/account/payment";
+    redirect(`/login?next=${encodeURIComponent(dest)}`);
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    redirect("/login");
+    const dest = token
+      ? `/account/payment?q=${encodeURIComponent(token)}`
+      : "/account/payment";
+    redirect(`/login?next=${encodeURIComponent(dest)}`);
   }
-
-  const qRaw = searchParams.q;
-  const token = typeof qRaw === "string" ? qRaw.trim() : "";
 
   if (!token) {
     return (
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
         <h1 style={{ fontSize: 28, marginTop: 0, color: "#0f172a" }}>Payment</h1>
         <p style={{ lineHeight: 1.7, color: "#475569" }}>
-          When your service fee is ready, we email you a <b>personal payment link</b>. Open it while signed in as{" "}
-          <b>{user.email}</b>, or paste the quote code from your email below.
+          When your service fee is ready, we email you a <b>personal payment link</b>. Open that link on any device — if
+          you are not signed in, you will sign in first and then return to this payment page. You can also paste the
+          quote code from your email below (signed in as <b>{user.email}</b>).
         </p>
         <form
           method="get"

@@ -32,7 +32,7 @@ export const config = {
     secretKey: process.env.PAYMONGO_SECRET_KEY || "",
     publicKey: process.env.PAYMONGO_PUBLIC_KEY || "",
     webhookSecret: process.env.PAYMONGO_WEBHOOK_SECRET || "",
-    paymentMethodTypes: (process.env.PAYMONGO_PAYMENT_METHOD_TYPES || "gcash")
+    paymentMethodTypes: (process.env.PAYMONGO_PAYMENT_METHOD_TYPES || "qrph,gcash,paymaya")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),

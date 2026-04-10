@@ -18,11 +18,12 @@ function authHeaderFromSecret(secretKey: string): string {
 }
 
 function normalizeMethods(raw: string[]): string[] {
-  const allowed = new Set(["gcash", "paymaya", "card", "grab_pay"]);
+  // PayMongo checkout_session.payment_method_types — include qrph for BSP QR Ph (multi-wallet QR).
+  const allowed = new Set(["qrph", "gcash", "paymaya", "card", "grab_pay"]);
   const out = raw
     .map((m) => m.trim().toLowerCase())
     .filter((m) => allowed.has(m));
-  return out.length ? out : ["gcash"];
+  return out.length ? out : ["qrph", "gcash", "paymaya"];
 }
 
 export async function createPayMongoCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutResult> {

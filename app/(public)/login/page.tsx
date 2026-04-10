@@ -1,5 +1,21 @@
-export default function LoginPage({ searchParams }: { searchParams?: { error?: string } }) {
-  const error = searchParams?.error;
+import { safePostLoginPath } from "@/lib/postLoginRedirect";
+
+/** Must be dynamic or `next` is often missing (stale shell / caching). */
+export const dynamic = "force-dynamic";
+
+function firstString(v: string | string[] | undefined): string | undefined {
+  if (v == null) return undefined;
+  return typeof v === "string" ? v : v[0];
+}
+
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string; next?: string | string[] };
+}) {
+  const error = firstString(searchParams?.error);
+  const nextRaw = firstString(searchParams?.next);
+  const next = nextRaw ? safePostLoginPath(nextRaw) : null;
 
   const msg =
     error === "invalid"
@@ -30,6 +46,7 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
       )}
 
       <form method="post" action="/api/auth/login" style={{ marginTop: 18, display: "grid", gap: 12 }}>
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         <label>
           Email
           <input name="email" type="email" required style={inputStyle} />
