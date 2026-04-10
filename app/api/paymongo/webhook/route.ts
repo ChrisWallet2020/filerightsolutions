@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 
+/** Browsers and crawlers often GET this URL; PayMongo delivers events via POST only. */
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "Use POST for PayMongo webhooks" });
+}
+
 function pick(obj: any, path: string[]): any {
   let cur = obj;
   for (const key of path) {

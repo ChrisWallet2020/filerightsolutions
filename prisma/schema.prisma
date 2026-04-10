@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -220,7 +220,7 @@ model Evaluation1701ASubmission {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  // FULL FORM DATA (store as string for SQLite)
+  // FULL FORM DATA (JSON string)
   payloadJson String
 
   // PDF metadata (pdf will be generated server-side)
