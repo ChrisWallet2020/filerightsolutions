@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
+import { LoginPostForm } from "@/components/auth/LoginPostForm";
 
 type Teaser =
   | { ok: true; baseAmountPhp: number; expired: boolean; cancelled: boolean }
@@ -38,25 +38,13 @@ export function PaymentSignInGate({ nextPath, quoteTeaser }: { nextPath: string;
         </section>
       ) : null}
 
-      <form method="post" action="/api/auth/login" style={{ marginTop: 22, display: "grid", gap: 12 }}>
-        <input type="hidden" name="next" value={nextPath} />
-        <label style={{ fontSize: 14, color: "#334155" }}>
-          Email
-          <input name="email" type="email" required style={inputStyle} autoComplete="email" />
-        </label>
-        <label style={{ fontSize: 14, color: "#334155" }}>
-          Password
-          <input name="password" type="password" required style={inputStyle} autoComplete="current-password" />
-        </label>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -2 }}>
-          <Link href="/forgot-password" style={linkStyle}>
-            Forgot password?
-          </Link>
-        </div>
-        <button type="submit" style={btnPrimary}>
-          Sign in to continue
-        </button>
-      </form>
+      <LoginPostForm
+        nextPath={nextPath}
+        variant="dark"
+        formStyle={{ marginTop: 22, display: "grid", gap: 12 }}
+        submitLabel="Sign in to continue"
+        pendingLabel="Signing in…"
+      />
 
       <p style={{ marginTop: 16, color: "#475569", fontSize: 14 }}>
         No account? <Link href="/register">Create one</Link>
@@ -66,29 +54,3 @@ export function PaymentSignInGate({ nextPath, quoteTeaser }: { nextPath: string;
     </main>
   );
 }
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #e2e8f0",
-  marginTop: 6,
-  boxSizing: "border-box",
-};
-
-const btnPrimary: CSSProperties = {
-  background: "#0f172a",
-  color: "white",
-  padding: "10px 14px",
-  borderRadius: 10,
-  fontWeight: 800,
-  border: "none",
-  cursor: "pointer",
-};
-
-const linkStyle: CSSProperties = {
-  color: "#1d4ed8",
-  fontSize: 14,
-  fontWeight: 600,
-  textDecoration: "none",
-};

@@ -208,8 +208,6 @@ export async function POST(req: Request) {
   // Mark evaluation as submitted (and attach taxYear if provided)
   const taxYear = payload["taxYear"] || undefined;
 
-  const referralIdToCredit = evaluation.referralEventId;
-
   evaluation = await prisma.evaluation.update({
     where: { id: evaluation.id },
     data: {
@@ -218,12 +216,10 @@ export async function POST(req: Request) {
     },
   });
 
-  if (referralIdToCredit) {
-    await prisma.referralEvent.update({
-      where: { id: referralIdToCredit },
-      data: { evaluationCompleted: true },
-    });
-  }
+  await prisma.referralEvent.updateMany({
+    where: { referredUserId: userId, evaluationCompleted: false },
+    data: { evaluationCompleted: true },
+  });
 
   // Create PDF text summary (admin downloads a PDF copy)
   const summaryLines: string[] = [

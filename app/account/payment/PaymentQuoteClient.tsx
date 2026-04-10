@@ -78,8 +78,12 @@ export function PaymentQuoteClient({ quoteToken, disabled, label }: Props) {
         type="button"
         onClick={proceed}
         disabled={disabled || loading}
+        className={loading ? "btnIsPending" : undefined}
         style={{
           display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
           padding: "12px 16px",
           borderRadius: 12,
           border: "none",
@@ -89,7 +93,14 @@ export function PaymentQuoteClient({ quoteToken, disabled, label }: Props) {
           cursor: disabled || loading ? "not-allowed" : "pointer",
         }}
       >
-        {loading ? "Working…" : label || "Proceed to secure payment"}
+        {loading ? (
+          <span className="btnWithSpinner" style={{ color: "#fff" }}>
+            <span className="btnSpinner" aria-hidden />
+            Working…
+          </span>
+        ) : (
+          (label || "Proceed to secure payment")
+        )}
       </button>
     </div>
   );

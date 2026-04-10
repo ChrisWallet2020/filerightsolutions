@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { RegisterPostForm } from "@/components/auth/RegisterPostForm";
 
 export default function RegisterPage({
   searchParams,
@@ -39,57 +39,7 @@ export default function RegisterPage({
         </div>
       )}
 
-      <form
-        method="post"
-        action="/api/auth/register"
-        style={{ marginTop: 18, display: "grid", gap: 12 }}
-      >
-        <label>
-          Full Name
-          <input name="fullName" required style={inputStyle} />
-        </label>
-
-        <label>
-          Email
-          <input name="email" type="email" required style={inputStyle} />
-        </label>
-
-        <label>
-          Password
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            style={inputStyle}
-          />
-        </label>
-
-        <label>
-          Re-enter Password
-          <input
-            name="password2"
-            type="password"
-            required
-            minLength={8}
-            style={inputStyle}
-          />
-        </label>
-
-        <label>
-          Referral Code (optional)
-          <input
-            name="ref"
-            placeholder="If someone referred you"
-            defaultValue={referralFromLink}
-            style={inputStyle}
-          />
-        </label>
-
-        <button style={btnPrimary} type="submit">
-          Create Account
-        </button>
-      </form>
+      <RegisterPostForm defaultRef={referralFromLink} />
 
       <p style={{ marginTop: 14, color: "#475569" }}>
         Already have an account? <a href="/login">Sign in</a>
@@ -97,21 +47,3 @@ export default function RegisterPage({
     </main>
   );
 }
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #e2e8f0",
-  marginTop: 6,
-};
-
-const btnPrimary: CSSProperties = {
-  background: "#0f172a",
-  color: "white",
-  padding: "10px 14px",
-  borderRadius: 10,
-  fontWeight: 800,
-  border: "none",
-  cursor: "pointer",
-};

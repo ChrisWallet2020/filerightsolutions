@@ -182,6 +182,13 @@ export default function AccountDashboardClient({
               <span style={{ color: "#64748b" }}>
                 The referred client does not need to purchase anything for you to earn the credit.
               </span>
+              <br />
+              <br />
+              <span style={{ color: "#64748b" }}>
+                Please note that if your billing email was already issued before the credit was added to your account,
+                the reduction may not be reflected in that billing. Simply resubmit your evaluation to receive an updated
+                billing.
+              </span>
             </div>
           </div>
 

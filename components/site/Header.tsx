@@ -89,7 +89,7 @@ export function Header({ signedIn = false }: HeaderProps) {
               type="button"
               variant="secondary"
               className="hideMobile navRightAction"
-              disabled={signingOut}
+              loading={signingOut}
               onClick={() => void signOut()}
             >
               {signingOut ? "Signing out…" : "Sign out"}
@@ -122,7 +122,7 @@ export function Header({ signedIn = false }: HeaderProps) {
               type="button"
               className="wFull navRightAction"
               variant="secondary"
-              disabled={signingOut}
+              loading={signingOut}
               onClick={() => {
                 setOpen(false);
                 void signOut();

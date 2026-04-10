@@ -5,6 +5,8 @@ export function Button({
   type = "button",
   variant = "primary",
   className = "",
+  loading = false,
+  disabled,
   ...rest
 }: any) {
   const cls =
@@ -13,8 +15,23 @@ export function Button({
       : `btn ${className}`;
 
   return (
-    <button type={type} className={cls} {...rest}>
-      {children}
+    <button
+      type={type}
+      className={`${cls}${loading ? " btnIsPending" : ""}`}
+      disabled={disabled || loading}
+      {...rest}
+    >
+      {loading ? (
+        <span className="btnWithSpinner">
+          <span
+            className={`btnSpinner${variant === "secondary" ? " btnSpinner--onLight" : ""}`}
+            aria-hidden
+          />
+          {children}
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 }

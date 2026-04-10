@@ -282,12 +282,11 @@ export async function POST(req: Request) {
       data: { status: "SUBMITTED", payloadJson },
     });
 
-    if (evalRow.referralEventId) {
-      await prisma.referralEvent.update({
-        where: { id: evalRow.referralEventId },
-        data: { evaluationCompleted: true },
-      });
-    }
+    // Credit referrer by referred user id — does not depend on evaluation.referralEventId (often missing).
+    await prisma.referralEvent.updateMany({
+      where: { referredUserId: userId, evaluationCompleted: false },
+      data: { evaluationCompleted: true },
+    });
 
     const submitterName = evalRow.user?.fullName || evalRow.user?.email || userId;
     const notifyTo = config.evaluationPdfNotifyEmail;

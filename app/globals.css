@@ -331,6 +331,104 @@ a.btn:hover { filter: brightness(0.95); }
 
 .hideMobile { display: inline-block; }
 
+/* Top-of-viewport progress during client navigation and full-page form POSTs */
+.navRouteProgress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 10000;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.navRouteProgress--visible {
+  opacity: 1;
+}
+.navRouteProgress__bar {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #1e40af, #60a5fa, #93c5fd);
+  background-size: 200% 100%;
+  animation: navRouteProgressSlide 0.95s ease-in-out infinite;
+  transform: translateX(-100%);
+}
+.navRouteProgress--finishing .navRouteProgress__bar {
+  animation: none;
+  width: 100%;
+  transform: translateX(0);
+  transition: transform 0.28s ease-out, width 0.28s ease-out;
+}
+@keyframes navRouteProgressSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(380%);
+  }
+}
+
+@keyframes btnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.btnSpinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btnSpin 0.65s linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.btnSpinner--onLight {
+  border-color: rgba(15, 23, 42, 0.2);
+  border-top-color: #1e40af;
+}
+.btnWithSpinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.btnIsPending {
+  cursor: wait;
+  opacity: 0.9;
+}
+
+.btn:active:not(:disabled),
+button.btn:active:not(:disabled) {
+  transform: scale(0.98);
+  transition: transform 0.08s ease;
+}
+a.btn:active {
+  transform: scale(0.98);
+  transition: transform 0.08s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navRouteProgress__bar {
+    animation-duration: 2.5s;
+  }
+  .btn:active:not(:disabled),
+  button.btn:active:not(:disabled),
+  a.btn:active {
+    transform: none;
+  }
+  .btnSpinner {
+    animation: none;
+    border-top-color: rgba(255, 255, 255, 0.5);
+  }
+  .btnSpinner--onLight {
+    border-top-color: rgba(30, 64, 175, 0.5);
+  }
+}
+
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; }
   .trustStrip { grid-template-columns: 1fr; }

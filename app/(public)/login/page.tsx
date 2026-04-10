@@ -1,3 +1,4 @@
+import { LoginPostForm } from "@/components/auth/LoginPostForm";
 import { safePostLoginPath } from "@/lib/postLoginRedirect";
 
 /** Must be dynamic or `next` is often missing (stale shell / caching). */
@@ -45,28 +46,7 @@ export default function LoginPage({
         </div>
       )}
 
-      <form method="post" action="/api/auth/login" style={{ marginTop: 18, display: "grid", gap: 12 }}>
-        {next ? <input type="hidden" name="next" value={next} /> : null}
-        <label>
-          Email
-          <input name="email" type="email" required style={inputStyle} />
-        </label>
-
-        <label>
-          Password
-          <input name="password" type="password" required style={inputStyle} />
-        </label>
-
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -2 }}>
-          <a href="/forgot-password" style={linkStyle}>
-            Forgot password?
-          </a>
-        </div>
-
-        <button style={btnPrimary} type="submit">
-          Sign In
-        </button>
-      </form>
+      <LoginPostForm nextPath={next} submitLabel="Sign In" />
 
       <p style={{ marginTop: 14, color: "#475569" }}>
         No account yet? <a href="/register">Create one</a>
@@ -74,28 +54,3 @@ export default function LoginPage({
     </main>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #e2e8f0",
-  marginTop: 6,
-};
-
-const btnPrimary: React.CSSProperties = {
-  background: "#1e40af",
-  color: "white",
-  padding: "10px 14px",
-  borderRadius: 10,
-  fontWeight: 800,
-  border: "none",
-  cursor: "pointer",
-};
-
-const linkStyle: React.CSSProperties = {
-  color: "#1e40af",
-  fontSize: 14,
-  fontWeight: 600,
-  textDecoration: "none",
-};
