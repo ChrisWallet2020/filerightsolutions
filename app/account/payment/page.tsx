@@ -165,8 +165,6 @@ export default async function AccountPaymentPage({
   const isPaid = order?.status === ORDER_STATUS.PAID;
   const payDisabled = isPaid;
 
-  const payUrl = `${String(config.baseUrl).replace(/\/$/, "")}/account/payment?q=${encodeURIComponent(token)}`;
-
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
       <h1 style={{ fontSize: 28, marginTop: 0, color: "#0f172a" }}>Your bill</h1>
@@ -246,11 +244,6 @@ export default async function AccountPaymentPage({
       {!isPaid ? (
         <PaymentQuoteClient quoteToken={token} disabled={payDisabled} />
       ) : null}
-
-      <p style={{ marginTop: 20, fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-        You were sent this page link:{" "}
-        <span style={{ wordBreak: "break-all", color: "#334155" }}>{payUrl}</span>
-      </p>
 
       <p style={{ marginTop: 16 }}>
         <Link href="/account" style={{ color: "#1d4ed8", fontWeight: 700 }}>
