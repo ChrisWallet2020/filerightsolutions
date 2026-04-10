@@ -26,6 +26,8 @@ export type SendMailOptions = {
   replyTo?: string;
   /** If set, used as From instead of SMTP_FROM / support default */
   fromOverride?: string;
+  /** Comma-separated addresses allowed by nodemailer */
+  bcc?: string;
   attachments?: MailAttachment[];
 };
 
@@ -75,6 +77,7 @@ export async function sendMail(
     text,
     ...(html ? { html } : {}),
     ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
+    ...(opts?.bcc ? { bcc: opts.bcc } : {}),
     ...(attachmentPayload.length ? { attachments: attachmentPayload } : {}),
   });
 

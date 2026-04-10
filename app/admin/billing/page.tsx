@@ -64,7 +64,11 @@ export default async function AdminBillingPage({
       {emailed && !emailFailed && !emailDev ? (
         <div className="notice" style={{ marginTop: 14, borderColor: "#bbf7d0", background: "#f0fdf4" }}>
           <strong>Billing email sent</strong>
-          <p style={{ margin: "8px 0 0" }}>Message sent to the client with amounts and the payment link.</p>
+          <p style={{ margin: "8px 0 0" }}>
+            Your mail server accepted the message. If the client (or you) do not see it, check spam/promotions,
+            search by subject, and verify <code>SMTP_*</code> / SPF in Vercel logs (<code>BILLING_QUOTE_EMAIL_OK</code>).
+            Set <code>SMTP_BCC</code> in your deployment env to receive a blind copy of each billing send.
+          </p>
         </div>
       ) : null}
 

@@ -112,6 +112,7 @@ export async function POST(req: Request) {
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
       replyTo: config.supportEmail,
       attachments: emailAttachments,
+      ...(config.smtp.bcc ? { bcc: config.smtp.bcc } : {}),
       ...(!config.smtp.from?.trim()
         ? { fromOverride: `${config.siteName} <${config.supportEmail}>` }
         : {}),
@@ -120,6 +121,11 @@ export async function POST(req: Request) {
       emailDevLog = true;
     } else {
       emailSent = true;
+      console.info("BILLING_QUOTE_EMAIL_OK", {
+        to: user.email,
+        messageId: result.messageId,
+        bcc: Boolean(config.smtp.bcc),
+      });
     }
   } catch (e) {
     console.error("BILLING_QUOTE_EMAIL_FAILED:", e);
