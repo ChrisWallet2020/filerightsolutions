@@ -153,12 +153,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request — missing evaluation or form data." }, { status: 400 });
     }
 
-    const evalRow = await prisma.evaluation.findUnique({
+    let evalRow = await prisma.evaluation.findUnique({
       where: { id: String(evaluationId) },
       include: { referralEvent: true, user: true },
     });
     if (!evalRow || evalRow.userId !== userId) {
       return NextResponse.json({ error: "Evaluation not found." }, { status: 404 });
+    }
+
+    // Referred users have a ReferralEvent row; the draft Evaluation should reference it. If it does not
+    // (e.g. a newer evaluation was created without the link), attach before crediting the referrer.
+    if (!evalRow.referralEventId) {
+      const refEvt = await prisma.referralEvent.findUnique({
+        where: { referredUserId: userId },
+      });
+      if (refEvt) {
+        await prisma.evaluation.update({
+          where: { id: evalRow.id },
+          data: { referralEventId: refEvt.id },
+        });
+        evalRow = await prisma.evaluation.findUnique({
+          where: { id: evalRow.id },
+          include: { referralEvent: true, user: true },
+        });
+        if (!evalRow) {
+          return NextResponse.json({ error: "Evaluation not found." }, { status: 404 });
+        }
+      }
     }
 
     const incomingPayload =

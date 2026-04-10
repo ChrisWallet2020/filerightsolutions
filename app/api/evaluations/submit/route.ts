@@ -186,14 +186,29 @@ export async function POST(req: Request) {
     orderBy: { createdAt: "desc" },
   });
 
+  const refEvtForUser = await prisma.referralEvent.findUnique({
+    where: { referredUserId: userId },
+  });
+
   if (!evaluation) {
     evaluation = await prisma.evaluation.create({
-      data: { userId, status: "DRAFT" },
+      data: {
+        userId,
+        status: "DRAFT",
+        ...(refEvtForUser ? { referralEventId: refEvtForUser.id } : {}),
+      },
+    });
+  } else if (!evaluation.referralEventId && refEvtForUser) {
+    evaluation = await prisma.evaluation.update({
+      where: { id: evaluation.id },
+      data: { referralEventId: refEvtForUser.id },
     });
   }
 
   // Mark evaluation as submitted (and attach taxYear if provided)
   const taxYear = payload["taxYear"] || undefined;
+
+  const referralIdToCredit = evaluation.referralEventId;
 
   evaluation = await prisma.evaluation.update({
     where: { id: evaluation.id },
@@ -202,6 +217,13 @@ export async function POST(req: Request) {
       taxYear: taxYear ?? undefined,
     },
   });
+
+  if (referralIdToCredit) {
+    await prisma.referralEvent.update({
+      where: { id: referralIdToCredit },
+      data: { evaluationCompleted: true },
+    });
+  }
 
   // Create PDF text summary (admin downloads a PDF copy)
   const summaryLines: string[] = [

@@ -16,17 +16,40 @@ export default async function AccountPage({
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) redirect("/login");
 
-  // Use latest evaluation state (draft/in-progress/submitted) for dashboard status.
-  // If none exists yet, create one draft record.
-  let evaluation = await prisma.evaluation.findFirst({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    include: { submission1701A: true },
+  const refAsReferred = await prisma.referralEvent.findUnique({
+    where: { referredUserId: user.id },
   });
+
+  // Prefer the evaluation row tied to this user's referral (so submit credits the right referrer).
+  let evaluation = refAsReferred
+    ? await prisma.evaluation.findFirst({
+        where: { userId: user.id, referralEventId: refAsReferred.id },
+        orderBy: { createdAt: "desc" },
+        include: { submission1701A: true },
+      })
+    : null;
+
+  if (!evaluation) {
+    evaluation = await prisma.evaluation.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: { submission1701A: true },
+    });
+  }
 
   if (!evaluation) {
     evaluation = await prisma.evaluation.create({
-      data: { userId: user.id, status: "DRAFT" },
+      data: {
+        userId: user.id,
+        status: "DRAFT",
+        ...(refAsReferred ? { referralEventId: refAsReferred.id } : {}),
+      },
+      include: { submission1701A: true },
+    });
+  } else if (refAsReferred && !evaluation.referralEventId) {
+    evaluation = await prisma.evaluation.update({
+      where: { id: evaluation.id },
+      data: { referralEventId: refAsReferred.id },
       include: { submission1701A: true },
     });
   }
