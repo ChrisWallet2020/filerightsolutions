@@ -1,7 +1,9 @@
-import { redirect } from "next/navigation";
-import { getAuthedUserId } from "@/lib/auth";
+import type { ReactNode } from "react";
 
-export default function AccountBranchLayout({ children }: { children: React.ReactNode }) {
-  if (!getAuthedUserId()) redirect("/login");
+/**
+ * Root account segment: no auth gate here so `/account/payment` can show inline sign-in.
+ * Protected routes live under `(authed)/`.
+ */
+export default function AccountBranchLayout({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
