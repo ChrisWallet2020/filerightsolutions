@@ -9,9 +9,15 @@ function normalizeSiteBaseUrl(): string {
 export const config = {
   siteName: process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance",
   supportEmail: process.env.SUPPORT_EMAIL || "support@filerightsolutions.com",
-  /** Receives a PDF copy of each submitted 1701A evaluation (override with EVALUATION_PDF_NOTIFY_EMAIL). */
-  evaluationPdfNotifyEmail:
-    process.env.EVALUATION_PDF_NOTIFY_EMAIL || "christophermadayag@gmail.com",
+  /**
+   * When true, sends a PDF copy of each 1701A submit to evaluationPdfNotifyEmail.
+   * Default off so production does not spam an inbox on every submission.
+   */
+  evaluationSubmitNotifyAdmin:
+    process.env.EVALUATION_SUBMIT_NOTIFY_ADMIN === "true" ||
+    process.env.EVALUATION_SUBMIT_NOTIFY_ADMIN === "1",
+  /** Recipient for admin PDF notifications when evaluationSubmitNotifyAdmin is true. */
+  evaluationPdfNotifyEmail: (process.env.EVALUATION_PDF_NOTIFY_EMAIL || "").trim(),
   /** Canonical public site URL (no trailing slash). Used in emails, payment links, redirects. */
   baseUrl: normalizeSiteBaseUrl(),
   adminEmail: process.env.ADMIN_EMAIL || "admin@yourdomain.com",

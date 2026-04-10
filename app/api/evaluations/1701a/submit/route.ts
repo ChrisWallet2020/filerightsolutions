@@ -292,29 +292,31 @@ export async function POST(req: Request) {
     const notifyTo = config.evaluationPdfNotifyEmail;
     const attachmentName = `1701A-Evaluation-${evalRow.id}.pdf`;
 
-    try {
-      await sendMailWithAttachments(
-        notifyTo,
-        `1701A evaluation submitted — ${submitterName}`,
-        [
-          `A client submitted their 1701A evaluation form.`,
-          ``,
-          `Evaluation ID: ${evalRow.id}`,
-          `Submitted by: ${submitterName}`,
-          `Account email: ${evalRow.user?.email ?? "(unknown)"}`,
-          ``,
-          `The completed form is attached as a PDF.`,
-        ].join("\n"),
-        [
-          {
-            filename: attachmentName,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ]
-      );
-    } catch (mailErr) {
-      console.error("EVALUATION_SUBMIT_EMAIL_FAILED:", mailErr);
+    if (config.evaluationSubmitNotifyAdmin && notifyTo) {
+      try {
+        await sendMailWithAttachments(
+          notifyTo,
+          `1701A evaluation submitted — ${submitterName}`,
+          [
+            `A client submitted their 1701A evaluation form.`,
+            ``,
+            `Evaluation ID: ${evalRow.id}`,
+            `Submitted by: ${submitterName}`,
+            `Account email: ${evalRow.user?.email ?? "(unknown)"}`,
+            ``,
+            `The completed form is attached as a PDF.`,
+          ].join("\n"),
+          [
+            {
+              filename: attachmentName,
+              content: pdfBuffer,
+              contentType: "application/pdf",
+            },
+          ]
+        );
+      } catch (mailErr) {
+        console.error("EVALUATION_SUBMIT_EMAIL_FAILED:", mailErr);
+      }
     }
 
     // Queue a client follow-up email (next 1-2 business days) with a login-protected payment link.
