@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
     const jar = cookies();
     const cookieRaw = jar.get(LOGIN_RETURN_TO_COOKIE)?.value;
     const fromCookie = cookieRaw ? safePostLoginPath(cookieRaw) : null;
-    const to = fromCookie || nextPath || "/account";
+    // Prefer explicit `next` from the form so payment-page inline login beats a stale prepare-login cookie.
+    const to = nextPath || fromCookie || "/account";
 
     const res = NextResponse.redirect(absoluteUrlForInternalPath(request, to));
     applyUserSessionToResponse(res, user.id);

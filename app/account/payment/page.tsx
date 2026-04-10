@@ -6,6 +6,7 @@ import { getAuthedUserId } from "@/lib/auth";
 import { ORDER_STATUS } from "@/lib/constants";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { PaymentQuoteClient } from "./PaymentQuoteClient";
+import { PaymentSignInGate } from "./PaymentSignInGate";
 
 export const metadata = {
   title: "Payment",
@@ -22,19 +23,38 @@ export default async function AccountPaymentPage({
   const token = typeof qRaw === "string" ? qRaw.trim() : "";
 
   const userId = getAuthedUserId();
+  const nextPath = token
+    ? `/account/payment?q=${encodeURIComponent(token)}`
+    : "/account/payment";
+
   if (!userId) {
-    const dest = token
-      ? `/account/payment?q=${encodeURIComponent(token)}`
-      : "/account/payment";
-    redirect(`/api/auth/prepare-login?next=${encodeURIComponent(dest)}`);
+    let quoteTeaser:
+      | { ok: true; baseAmountPhp: number; expired: boolean; cancelled: boolean }
+      | { ok: false } = { ok: false };
+
+    if (token) {
+      const q = await prisma.paymentQuote.findUnique({
+        where: { token },
+        select: { baseAmountPhp: true, status: true, expiresAt: true },
+      });
+      if (q) {
+        const expired = !!(q.expiresAt && q.expiresAt < new Date());
+        const cancelled = q.status === "CANCELLED";
+        quoteTeaser = {
+          ok: true,
+          baseAmountPhp: q.baseAmountPhp,
+          expired,
+          cancelled,
+        };
+      }
+    }
+
+    return <PaymentSignInGate nextPath={nextPath} quoteTeaser={quoteTeaser} />;
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    const dest = token
-      ? `/account/payment?q=${encodeURIComponent(token)}`
-      : "/account/payment";
-    redirect(`/api/auth/prepare-login?next=${encodeURIComponent(dest)}`);
+    redirect(`/api/auth/prepare-login?next=${encodeURIComponent(nextPath)}`);
   }
 
   if (!token) {
@@ -42,9 +62,9 @@ export default async function AccountPaymentPage({
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
         <h1 style={{ fontSize: 28, marginTop: 0, color: "#0f172a" }}>Payment</h1>
         <p style={{ lineHeight: 1.7, color: "#475569" }}>
-          When your service fee is ready, we email you a <b>personal payment link</b>. Open that link on any device — if
-          you are not signed in, you will sign in first and then return to this payment page. You can also paste the
-          quote code from your email below (signed in as <b>{user.email}</b>).
+          When your service fee is ready, we email you a <b>personal payment link</b>. Open that link on any device — you
+          can sign in on the same page and pay. You can also paste the quote code from your email below (signed in as{" "}
+          <b>{user.email}</b>).
         </p>
         <form
           method="get"
