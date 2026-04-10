@@ -218,15 +218,23 @@ export async function POST(req: Request) {
     const pdfBytes = await generate1701aPdf(finalPayload);
     const pdfBuffer = Buffer.from(pdfBytes);
 
-    const uploadsDir = path.join(process.cwd(), "uploads", "evaluations");
-    await fs.mkdir(uploadsDir, { recursive: true });
-
     const pdfFilename = `evaluation_${evalRow.id}.pdf`;
-    const pdfPath = path.join(uploadsDir, pdfFilename);
-
-    await fs.writeFile(pdfPath, pdfBuffer);
-
-    const stat = await fs.stat(pdfPath);
+    // Serverless / read-only FS: skip disk; admin PDF regenerates from payloadJson.
+    let pdfPath: string;
+    let pdfSizeBytes: number;
+    const uploadsDir = path.join(process.cwd(), "uploads", "evaluations");
+    const diskPath = path.join(uploadsDir, pdfFilename);
+    try {
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.writeFile(diskPath, pdfBuffer);
+      const stat = await fs.stat(diskPath);
+      pdfPath = diskPath;
+      pdfSizeBytes = stat.size;
+    } catch (diskErr) {
+      console.warn("1701A_PDF_DISK_SKIP:", diskErr);
+      pdfPath = `__inline__/${pdfFilename}`;
+      pdfSizeBytes = pdfBuffer.length;
+    }
 
     await prisma.$transaction(async (tx) => {
       // Recreate submission row on every submit so admin listing (createdAt desc)
@@ -243,7 +251,7 @@ export async function POST(req: Request) {
           pdfFilename,
           pdfPath,
           pdfMimeType: "application/pdf",
-          pdfSizeBytes: stat.size,
+          pdfSizeBytes,
         },
       });
     });

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
+import { config } from "@/lib/config";
+import { verifyPaymongoWebhookSignature } from "@/lib/paymongo/verifyWebhook";
 
 /** Browsers and crawlers often GET this URL; PayMongo delivers events via POST only. */
 export async function GET() {
@@ -18,6 +20,16 @@ function pick(obj: any, path: string[]): any {
 
 export async function POST(req: Request) {
   const raw = await req.text();
+
+  const webhookSecret = config.paymongo.webhookSecret.trim();
+  if (webhookSecret) {
+    const sigHeader =
+      req.headers.get("paymongo-signature") || req.headers.get("Paymongo-Signature");
+    if (!verifyPaymongoWebhookSignature(raw, sigHeader, webhookSecret)) {
+      return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
+    }
+  }
+
   let evt: any = null;
   try {
     evt = JSON.parse(raw);

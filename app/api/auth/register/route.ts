@@ -151,14 +151,15 @@ export async function POST(req: Request) {
 <p style="color:#64748b;font-size:13px;">If you did not create this account, you may safely ignore this message.</p>
 ${billingEmailFooterHtml()}`;
 
+    const next = new URL("/register/email-sent", req.url);
+    next.searchParams.set("email", email);
     try {
       await sendMail(email, subject, textBody, htmlBody);
     } catch (mailErr) {
       console.error("REGISTER_CONFIRM_EMAIL_FAILED:", mailErr);
+      next.searchParams.set("mail", "failed");
     }
 
-    const next = new URL("/register/email-sent", req.url);
-    next.searchParams.set("email", email);
     return NextResponse.redirect(next, 303);
   } catch (err) {
     console.error("REGISTER_ERROR:", err);

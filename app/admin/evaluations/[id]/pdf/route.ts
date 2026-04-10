@@ -54,6 +54,11 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     }
   }
 
+  // Vercel submissions store no file on disk (see 1701a submit route).
+  if (sub.pdfPath.startsWith("__inline__/")) {
+    return new NextResponse("PDF not available", { status: 404 });
+  }
+
   try {
     const bytes = await fs.readFile(sub.pdfPath);
     const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
