@@ -78,18 +78,16 @@ export function PaymentQuoteClient({ quoteToken, disabled, label }: Props) {
         type="button"
         onClick={proceed}
         disabled={disabled || loading}
-        className={loading ? "btnIsPending" : undefined}
+        className={loading ? "btn btnIsPending" : "btn"}
         style={{
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          padding: "12px 16px",
-          borderRadius: 12,
-          border: "none",
-          background: disabled ? "#94a3b8" : "#0f172a",
-          color: "#fff",
-          fontWeight: 800,
+          width: "100%",
+          boxSizing: "border-box",
+          padding: "12px 20px",
+          opacity: disabled && !loading ? 0.55 : 1,
           cursor: disabled || loading ? "not-allowed" : "pointer",
         }}
       >

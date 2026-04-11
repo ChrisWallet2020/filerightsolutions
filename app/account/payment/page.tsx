@@ -89,7 +89,7 @@ export default async function AccountPaymentPage({
               padding: "10px 16px",
               borderRadius: 10,
               border: "none",
-              background: "#0f172a",
+              background: "#1e40af",
               color: "#fff",
               fontWeight: 800,
               cursor: "pointer",
@@ -166,78 +166,188 @@ export default async function AccountPaymentPage({
   const payDisabled = isPaid;
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-      <h1 style={{ fontSize: 28, marginTop: 0, color: "#0f172a" }}>Your bill</h1>
-      <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>
-        Signed in as <b style={{ color: "#0f172a" }}>{user.email}</b>
-      </p>
+    <main style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 56px" }}>
+      <header style={{ marginBottom: 28 }}>
+        <p
+          style={{
+            margin: "0 0 8px",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#64748b",
+          }}
+        >
+          Secure checkout
+        </p>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 28,
+            lineHeight: 1.2,
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            color: "#0f172a",
+          }}
+        >
+          Payment summary
+        </h1>
+        <p style={{ margin: "12px 0 0", fontSize: 14, lineHeight: 1.5, color: "#64748b" }}>
+          Signed in as{" "}
+          <span style={{ color: "#334155", fontWeight: 600 }}>{user.email}</span>
+        </p>
+      </header>
 
       <section
         style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 14,
-          background: "#f8fafc",
-          padding: 18,
-          marginBottom: 20,
+          border: "1px solid var(--line)",
+          borderRadius: 16,
+          background: "#fff",
+          boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 28px rgba(15, 23, 42, 0.07)",
+          overflow: "hidden",
+          marginBottom: 24,
         }}
       >
-        <div style={{ display: "grid", gap: 10, fontSize: 15, color: "#334155" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <span>Service Fee</span>
-            <b style={{ color: "#0f172a" }}>₱{totals.baseAmountPhp.toLocaleString()}</b>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <span>Credit Reduction ({config.referralFeeReductionPercent}%)</span>
-            <b style={{ color: totals.discountPhp > 0 ? "#15803d" : "#64748b" }}>
-              {totals.discountPhp > 0 ? `-₱${totals.discountPhp.toLocaleString()}` : "—"}
-            </b>
+        <div
+          style={{
+            padding: "14px 20px",
+            borderBottom: "1px solid var(--line)",
+            background: "#fafbfc",
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: "#64748b",
+            }}
+          >
+            Charges
+          </h2>
+        </div>
+
+        <div style={{ padding: "20px 20px 4px", display: "grid", gap: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              gap: 16,
+              flexWrap: "wrap",
+              fontSize: 15,
+              color: "#334155",
+            }}
+          >
+            <span>Service fee</span>
+            <span style={{ fontWeight: 600, color: "#0f172a", fontVariantNumeric: "tabular-nums" }}>
+              ₱{totals.baseAmountPhp.toLocaleString()}
+            </span>
           </div>
           <div
             style={{
-              borderTop: "1px solid #e2e8f0",
-              paddingTop: 12,
-              marginTop: 4,
               display: "flex",
               justifyContent: "space-between",
-              gap: 12,
+              alignItems: "baseline",
+              gap: 16,
               flexWrap: "wrap",
+              fontSize: 15,
+              color: "#334155",
             }}
           >
-            <span style={{ fontWeight: 800, color: "#0f172a" }}>Total Payment</span>
-            <b style={{ fontSize: 18, color: "#0f172a" }}>₱{totals.finalAmountPhp.toLocaleString()}</b>
+            <span>Referral credit ({config.referralFeeReductionPercent}%)</span>
+            <span
+              style={{
+                fontWeight: 600,
+                fontVariantNumeric: "tabular-nums",
+                color: totals.discountPhp > 0 ? "#15803d" : "#94a3b8",
+              }}
+            >
+              {totals.discountPhp > 0 ? `−₱${totals.discountPhp.toLocaleString()}` : "—"}
+            </span>
           </div>
         </div>
 
-        {confirmedCredits < 1 && (
-          <p style={{ margin: "14px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-            You currently have no confirmed referral credit to apply to this bill.
+        <div
+          style={{
+            margin: "12px 20px 0",
+            padding: "16px 0 20px",
+            borderTop: "1px solid var(--line)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Total payment</span>
+          <span
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              color: "#0f172a",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            ₱{totals.finalAmountPhp.toLocaleString()}
+          </span>
+        </div>
+
+        {confirmedCredits < 1 ? (
+          <p
+            style={{
+              margin: 0,
+              padding: "14px 20px 18px",
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: "#64748b",
+              borderTop: "1px solid var(--line)",
+              background: "#fafbfc",
+            }}
+          >
+            No confirmed referral credits apply to this payment yet. Credits appear after referred clients complete their
+            evaluation.
           </p>
-        )}
+        ) : null}
 
         {quote.clientNote ? (
-          <p style={{ margin: "14px 0 0", fontSize: 14, color: "#334155", lineHeight: 1.7 }}>
-            <b>Note:</b> {quote.clientNote}
-          </p>
+          <div
+            style={{
+              padding: "16px 20px 20px",
+              borderTop: "1px solid var(--line)",
+              background: "#fff",
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#64748b" }}>
+              Note from your preparer
+            </p>
+            <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#334155" }}>{quote.clientNote}</p>
+          </div>
         ) : null}
       </section>
 
       {isPaid && order ? (
         <div
           style={{
-            padding: 14,
+            padding: 16,
             borderRadius: 12,
             border: "1px solid #bbf7d0",
             background: "#f0fdf4",
             color: "#166534",
-            marginBottom: 16,
+            marginBottom: 20,
+            fontSize: 14,
+            lineHeight: 1.6,
           }}
         >
           Payment received for order <b>{order.orderId}</b>. Thank you.
         </div>
       ) : order && order.status === ORDER_STATUS.PENDING ? (
-        <p style={{ color: "#475569", marginBottom: 16 }}>
-          A payment is already in progress for order <b>{order.orderId}</b>. You can continue to the payment status
-          page or try again below.
+        <p style={{ color: "#475569", marginBottom: 20, fontSize: 14, lineHeight: 1.65 }}>
+          A payment is already in progress for order <b>{order.orderId}</b>. You can continue to the payment status page
+          or try again below.
         </p>
       ) : null}
 
@@ -245,8 +355,15 @@ export default async function AccountPaymentPage({
         <PaymentQuoteClient quoteToken={token} disabled={payDisabled} />
       ) : null}
 
-      <p style={{ marginTop: 16 }}>
-        <Link href="/account" style={{ color: "#1d4ed8", fontWeight: 700 }}>
+      <p style={{ marginTop: 22 }}>
+        <Link
+          href="/account"
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: "#475569",
+          }}
+        >
           ← Back to account
         </Link>
       </p>
