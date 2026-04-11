@@ -38,7 +38,10 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   if (sub.payloadJson?.trim()) {
     try {
       const payload = JSON.parse(sub.payloadJson) as Record<string, unknown>;
-      const pdfBytes = await generate1701aPdf(payload);
+      const pdfBytes = await generate1701aPdf(payload, {
+        accountEmail: sub.evaluation.user?.email ?? null,
+        submit1701aCount: sub.evaluation.submit1701aCount ?? null,
+      });
       const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
       return new NextResponse(Buffer.from(pdfBytes), {
         headers: {

@@ -5,6 +5,7 @@
     "node": "20.x"
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "prisma generate && prisma db push && next build",
     "start": "next start",

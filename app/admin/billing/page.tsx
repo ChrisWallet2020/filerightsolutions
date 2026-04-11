@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAdminAuthed } from "@/lib/auth";
+import { getSubmitted1701aClientOptions } from "@/lib/admin/submittedClientOptions";
 import { BillingQuoteForm } from "./BillingQuoteForm";
 
 export default async function AdminBillingPage({
@@ -11,7 +12,10 @@ export default async function AdminBillingPage({
     redirect("/admin/login");
   }
 
+  const submittedClients = await getSubmitted1701aClientOptions();
+
   const previewError = typeof searchParams.previewError === "string" ? searchParams.previewError.trim() : "";
+  const quoteError = typeof searchParams.quoteError === "string" ? searchParams.quoteError.trim() : "";
   const emailed = searchParams.emailed === "1";
   const emailFailed = searchParams.emailError === "1";
   const emailDev = searchParams.emailDev === "1";
@@ -19,20 +23,30 @@ export default async function AdminBillingPage({
   const previewErrorMessage =
     previewError === "user_not_found"
       ? "Preview failed: no registered account matches the client email."
-      : previewError === "invalid_form"
-        ? "Preview failed: please check required fields and try again."
-        : previewError === "attachment_type"
-          ? "Preview failed: billing images must be image files."
-          : previewError === "attachment_size"
-            ? "Preview failed: each image must be 10MB or smaller."
-            : "";
+      : previewError === "evaluation_not_submitted"
+        ? "Preview failed: billing is limited to clients who have already submitted their 1701A evaluation."
+        : previewError === "invalid_form"
+          ? "Preview failed: please check required fields and try again."
+          : previewError === "attachment_type"
+            ? "Preview failed: billing images must be image files."
+            : previewError === "attachment_size"
+              ? "Preview failed: each image must be 10MB or smaller."
+              : "";
+
+  const quoteErrorMessage =
+    quoteError === "evaluation_not_submitted"
+      ? "Quote was not created: that account has not submitted a 1701A evaluation yet."
+      : quoteError === "user_not_found"
+        ? "Quote was not created: no registered account matches that email."
+        : "";
 
   return (
     <section className="section">
       <h1>Billing &amp; quotes</h1>
       <p className="muted">
-        Enter the client&apos;s registered email and total service fee. <b>Send billing email</b> creates the quote and
-        sends the payment email. You can attach up to three images if needed.
+        Enter the email of a client who has already <b>submitted</b> their 1701A evaluation, plus the service fee.{" "}
+        <b>Send billing email</b> creates the quote and sends the payment email. You can attach up to three images if
+        needed.
       </p>
 
       {emailFailed ? (
@@ -62,11 +76,21 @@ export default async function AdminBillingPage({
       ) : null}
 
       {emailed && !emailFailed && !emailDev ? (
-        <div className="notice" style={{ marginTop: 14, borderColor: "#bbf7d0", background: "#f0fdf4" }}>
-          <strong>Billing email sent</strong>
-          <p style={{ margin: "8px 0 0", color: "#166534", lineHeight: 1.6 }}>
-            The client should receive the message shortly. If they don&apos;t see it, ask them to check spam or
-            promotions and search by subject. You can copy the new payment link below to send manually if needed.
+        <div
+          className="notice"
+          style={{
+            marginTop: 14,
+            width: "100%",
+            maxWidth: 760,
+            borderColor: "#86efac",
+            background: "#f0fdf4",
+            padding: "8px 12px",
+            color: "#14532d",
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.01em" }}>Billing email sent</div>
+          <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.5, color: "#166534" }}>
+            Delivery is usually immediate. If the client doesn&apos;t see it, suggest spam or promotions.
           </p>
         </div>
       ) : null}
@@ -81,7 +105,17 @@ export default async function AdminBillingPage({
         </div>
       ) : null}
 
-      <BillingQuoteForm />
+      {quoteErrorMessage ? (
+        <div
+          className="notice"
+          style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
+        >
+          <strong>Unable to create quote</strong>
+          <p style={{ margin: "8px 0 0" }}>{quoteErrorMessage}</p>
+        </div>
+      ) : null}
+
+      <BillingQuoteForm submittedClients={submittedClients} />
     </section>
   );
 }

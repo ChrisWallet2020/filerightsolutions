@@ -1,21 +1,35 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { AdminClientEmailCombobox, type AdminClientEmailOption } from "@/components/admin/AdminClientEmailCombobox";
 
 const PREVIEW_ERR: Record<string, string> = {
   user_not_found: "Preview failed: no registered account matches the client email.",
+  evaluation_not_submitted:
+    "Preview failed: billing is limited to clients who have already submitted their 1701A evaluation.",
   invalid_form: "Preview failed: please check required fields and try again.",
   attachment_type: "Preview failed: billing images must be image files (JPEG, PNG, etc.).",
   attachment_size: "Preview failed: each image must be 10MB or smaller.",
 };
 
-export function BillingQuoteForm() {
+const SEND_ERR: Record<string, string> = {
+  unauthorized: "You are not signed in as admin.",
+  invalid: "Send failed: please check required fields and try again.",
+  attachment_must_be_image: "Send failed: billing images must be image files (JPEG, PNG, etc.).",
+  attachment_too_large_max_10mb: "Send failed: each image must be 10MB or smaller.",
+};
+
+export function BillingQuoteForm({ submittedClients }: { submittedClients: AdminClientEmailOption[] }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [previewBanner, setPreviewBanner] = useState<string | null>(null);
+  const [sendBanner, setSendBanner] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [sending, setSending] = useState(false);
 
   async function handlePreview() {
     setPreviewBanner(null);
+    setPreviewHtml(null);
     const form = formRef.current;
     if (!form) return;
     setPreviewing(true);
@@ -51,19 +65,39 @@ export function BillingQuoteForm() {
         return;
       }
 
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const win = window.open(url, "_blank", "noopener,noreferrer");
-      if (!win) {
-        URL.revokeObjectURL(url);
-        setPreviewBanner("Pop-up blocked. Allow pop-ups for this site to see the preview.");
-        return;
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 120_000);
+      setPreviewHtml(html);
     } catch {
       setPreviewBanner("Preview failed. Check your connection and try again.");
     } finally {
       setPreviewing(false);
+    }
+  }
+
+  async function handleSend(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    setSendBanner(null);
+    setSending(true);
+    let navigated = false;
+    try {
+      const res = await fetch(form.action || "/api/admin/payment-quotes/send", {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+        redirect: "follow",
+      });
+      if (res.ok) {
+        navigated = true;
+        window.location.assign(res.url);
+        return;
+      }
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const code = typeof data.error === "string" ? data.error : "request_failed";
+      setSendBanner(SEND_ERR[code] || `Send failed (${res.status}). Try again.`);
+    } catch {
+      setSendBanner("Send failed: check your connection and try again.");
+    } finally {
+      if (!navigated) setSending(false);
     }
   }
 
@@ -80,16 +114,31 @@ export function BillingQuoteForm() {
             <p style={{ margin: "8px 0 0" }}>{previewBanner}</p>
           </div>
         ) : null}
+        {sendBanner ? (
+          <div
+            className="notice"
+            style={{ marginBottom: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
+          >
+            <strong>Send billing email</strong>
+            <p style={{ margin: "8px 0 0" }}>{sendBanner}</p>
+          </div>
+        ) : null}
         <form
           ref={formRef}
           method="post"
           action="/api/admin/payment-quotes/send"
           className="form"
           encType="multipart/form-data"
+          onSubmit={(ev) => void handleSend(ev)}
         >
           <label>
-            Client email (must match registered account)
-            <input name="userEmail" type="email" required placeholder="client@example.com" />
+            Client email (must have submitted 1701A evaluation)
+            <AdminClientEmailCombobox
+              options={submittedClients}
+              inputName="userEmail"
+              required
+              placeholder="client@example.com"
+            />
           </label>
           <label>
             Service Fee (PHP)
@@ -120,14 +169,34 @@ export function BillingQuoteForm() {
             </label>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            <button type="button" className="btn btnSecondary" disabled={previewing} onClick={handlePreview}>
-              {previewing ? "Opening preview…" : "Preview billing email"}
+            <button type="button" className="btn btnSecondary" disabled={previewing || sending} onClick={handlePreview}>
+              {previewing ? "Loading preview…" : "Preview billing email"}
             </button>
-            <button type="submit" className="btn">
-              Send billing email
+            <button type="submit" className="btn" disabled={previewing || sending}>
+              {sending ? "Sending..." : "Send billing email"}
             </button>
           </div>
         </form>
+
+        {previewHtml ? (
+          <div style={{ marginTop: 28 }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 17, color: "#0f172a" }}>Billing email preview</h3>
+            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>
+              Nothing was sent. Scroll inside the frame to see the full message, images, and HTML rendering.
+            </p>
+            <iframe
+              title="Billing email preview"
+              srcDoc={previewHtml}
+              style={{
+                width: "100%",
+                minHeight: 720,
+                border: "1px solid var(--line)",
+                borderRadius: 12,
+                background: "#fff",
+              }}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

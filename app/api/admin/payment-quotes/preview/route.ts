@@ -9,6 +9,7 @@ import {
 } from "@/lib/admin/billingAttachments";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
+import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 
 const Schema = z.object({
   userEmail: z.string().email(),
@@ -69,12 +70,20 @@ export async function POST(req: Request) {
 
   const { userEmail, baseAmountPhp, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
+  const eligible = await findUserWith1701aSubmissionByEmail(email);
+  if (!eligible) {
+    const exists = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const code = exists ? "evaluation_not_submitted" : "user_not_found";
     return ct.includes("application/json")
-      ? new NextResponse("User not found for provided email.", { status: 404 })
-      : redirectBillingError(req, "user_not_found");
+      ? new NextResponse(
+          code === "evaluation_not_submitted"
+            ? "That account has not submitted a 1701A evaluation yet."
+            : "User not found for provided email.",
+          { status: 404 }
+        )
+      : redirectBillingError(req, code);
   }
+  const user = eligible;
   const confirmedCredits = await prisma.referralEvent.count({
     where: { referrerId: user.id, evaluationCompleted: true },
   });
@@ -124,7 +133,8 @@ export async function POST(req: Request) {
     .muted { color: #64748b; font-size: 13px; }
     pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 13px; line-height: 1.45; }
     .divider { height: 1px; background: #e2e8f0; margin: 18px 0; }
-    iframe { width: 100%; min-height: 420px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+    iframe { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+    .emailHtmlFrame { min-height: 480px; margin-top: 4px; display: block; }
     .topline { margin-bottom: 8px; }
     .backBtn { display: inline-block; margin: 0 0 12px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; text-decoration: none; color: #0f172a; font-size: 13px; font-weight: 600; background: #fff; }
   </style>
@@ -139,8 +149,7 @@ export async function POST(req: Request) {
     <div><b>Subject:</b> ${esc(built.subject)}</div>
     <div><b>Attachments:</b> ${esc(attachmentList.join(", "))}</div>
   </div>
-  <h2>Plain Text Body</h2>
-  <div class="card"><pre>${esc(built.textBody)}</pre></div>
+  <iframe class="emailHtmlFrame" srcdoc="${esc(built.htmlBody)}"></iframe>
   <div class="divider"></div>
   <h2>Your billing images (as sent)</h2>
   ${
@@ -151,9 +160,6 @@ export async function POST(req: Request) {
   <div class="divider"></div>
   <h2>Billing summary file (.txt)</h2>
   <div class="card"><pre>${esc(summaryText)}</pre></div>
-  <div class="divider"></div>
-  <h2>HTML Email Rendering</h2>
-  <iframe srcdoc="${esc(built.htmlBody)}"></iframe>
 </body>
 </html>`;
 

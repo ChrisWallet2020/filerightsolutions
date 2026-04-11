@@ -1,4 +1,3 @@
-import "../globals.css";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { config } from "@/lib/config";
@@ -15,12 +14,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const signedIn = !!getAuthedUserId();
 
   return (
-    <html lang="en">
-      <body>
-        <Header signedIn={signedIn} />
-        <div className="publicSiteShell">{children}</div>
-        <Footer />
-      </body>
-    </html>
+    <>
+      <Header signedIn={signedIn} />
+      <div className="publicSiteShell">{children}</div>
+      <Footer />
+    </>
   );
 }

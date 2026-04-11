@@ -31,7 +31,7 @@ const qa = [
   },
   {
     q: "How long does the process take?",
-    a: "Initial evaluation typically takes 1–2 business days. The full amendment process may vary depending on your case and document completeness.",
+    a: "Initial evaluation typically takes 24 hours to complete. The full amendment process may vary depending on your case and document completeness.",
   },
   {
     q: "Will you file the amendment for me?",

@@ -124,7 +124,7 @@ export default function Evaluation1701APage() {
               <div className="text-xs font-semibold text-neutral-700">{completion}%</div>
             </div>
             <div className="mt-2 text-[11px] text-neutral-600">
-              Finish now to enter the queue (1–2 business days).
+              Finish now to enter the queue (24 hours to complete).
             </div>
           </div>
         </div>
@@ -233,13 +233,14 @@ export default function Evaluation1701APage() {
 
         <div className="flex items-center justify-between">
           <div className="text-xs text-neutral-500">
-            After submission, evaluation typically completes in <span className="font-semibold">1–2 business days</span>.
+            After submission, evaluation typically takes{" "}
+            <span className="font-semibold">24 hours to complete</span>.
           </div>
 
           <button
             onClick={onSubmit}
             disabled={submitting}
-            className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-xl bg-[#1e40af] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
           >
             {submitting ? "Submitting..." : "Submit"}
           </button>

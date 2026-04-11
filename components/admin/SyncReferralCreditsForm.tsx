@@ -18,7 +18,7 @@ export function SyncReferralCreditsForm() {
           color: "#0f172a",
         }}
       >
-        Sync referral credits from submitted evaluations
+        Fix referral credits
       </SubmitButton>
     </form>
   );

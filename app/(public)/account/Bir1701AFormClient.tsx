@@ -211,7 +211,7 @@ const emptyForm: FormState = {
   part4: defaultPart4(),
 };
 
-/** Part I items 1–19 except 14 (Foreign Tax Number) must be filled before Page 2. */
+/** Part I items 1–19 except 14, 17, 18 (optional for “Next”) must be filled before Page 2. */
 function validatePartOneForNextPage(d: FormState): string | null {
   const missing: string[] = [];
   const add = (label: string) => missing.push(label);
@@ -237,14 +237,7 @@ function validatePartOneForNextPage(d: FormState): string | null {
   // 14 - Foreign Tax Number: optional (not validated)
   if (!d.contactNumber.trim()) add("15 - Contact Number");
   if (!d.civilStatus) add("16 - Civil Status");
-  if (d.civilStatus === "MARRIED") {
-    if (d.spouseHasIncome !== "YES" && d.spouseHasIncome !== "NO") {
-      add("17 - Spouse has income?");
-    }
-    if (d.filingStatus !== "JOINT" && d.filingStatus !== "SEPARATE") {
-      add("18 - Filing Status");
-    }
-  }
+  // 17–18: optional for advancing to Page 2 (still available when married)
   if (d.taxRateMethod !== "GRAD_OSD" && d.taxRateMethod !== "EIGHT_PERCENT") add("19 - Tax Rate");
 
   if (missing.length === 0) return null;
@@ -1172,7 +1165,7 @@ function RadioRow({
           width: 14,
           height: 14,
           borderRadius: 999,
-          border: "1px solid #0f172a",
+          border: "1px solid #1e40af",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1185,7 +1178,7 @@ function RadioRow({
               width: 8,
               height: 8,
               borderRadius: 999,
-              background: "#0f172a",
+              background: "#1e40af",
               display: "block",
             }}
           />
@@ -1660,7 +1653,7 @@ const atc7Grid: React.CSSProperties = {
 };
 
 const btnPrimary: React.CSSProperties = {
-  background: "#0f172a",
+  background: "#1e40af",
   color: "white",
   padding: "10px 14px",
   borderRadius: 10,

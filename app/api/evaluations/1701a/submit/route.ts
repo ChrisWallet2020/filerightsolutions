@@ -8,6 +8,12 @@ import { generate1701aPdf } from "@/lib/pdf1701a";
 import { sendMailWithAttachments } from "@/lib/email/mailer";
 import { config } from "@/lib/config";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
+import {
+  emailSignatureText,
+  joinTextParagraphs,
+  textToEmailHtmlParagraphs,
+  wrapEmailMainHtml,
+} from "@/lib/email/formatting";
 
 type AnyObj = Record<string, unknown>;
 
@@ -40,11 +46,10 @@ function extractSalesValue(payload: AnyObj): number | null {
 
 function buildBelowMinimumMessage(minValue: number): string {
   const minPeso = `\u20b1${Math.round(minValue).toLocaleString("en-PH")}`;
-  return [
+  return joinTextParagraphs([
     `We regret to inform you that we are currently unable to process requests where total Sales / Revenues / Receipts / Fees are below ${minPeso}.`,
-    "",
     "We appreciate your interest in our services, and we hope to assist you in the future should your circumstances change.",
-  ].join("\n");
+  ]);
 }
 
 function nextDayAtNineAM(start: Date): Date {
@@ -55,20 +60,14 @@ function nextDayAtNineAM(start: Date): Date {
 }
 
 function buildNoReductionEmailBody(customerName: string): string {
-  return [
+  return joinTextParagraphs([
     `Dear ${customerName},`,
-    "",
     "After reviewing your details, we found no meaningful tax reduction opportunity based on applicable rules and allowable adjustments.",
-    "",
     "At this level, the available deductions, credits, and optimization strategies typically result in minimal or no material difference in the final tax payable. As part of our commitment to transparency and value, we only recommend proceeding when there is a clear and beneficial outcome for you.",
-    "",
     "For this reason, we are unable to proceed with further processing at this time.",
-    "",
     "Thank you for your understanding and for considering our services.",
-    "",
-    "Sincerely,",
-    "Reiner",
-  ].join("\n");
+    emailSignatureText("Reiner"),
+  ]);
 }
 
 function addBusinessDays(start: Date, businessDays: number): Date {
@@ -236,7 +235,13 @@ export async function POST(req: Request) {
       }
     }
 
-    const pdfBytes = await generate1701aPdf(finalPayload);
+    const priorSubmitCount = evalRow.submit1701aCount ?? 0;
+    const submitOrdinalForPdf = priorSubmitCount + 1;
+
+    const pdfBytes = await generate1701aPdf(finalPayload, {
+      accountEmail: evalRow.user?.email ?? null,
+      submit1701aCount: submitOrdinalForPdf,
+    });
     const pdfBuffer = Buffer.from(pdfBytes);
 
     const pdfFilename = `evaluation_${evalRow.id}.pdf`;
@@ -275,12 +280,26 @@ export async function POST(req: Request) {
           pdfSizeBytes,
         },
       });
+
+      await tx.evaluation.update({
+        where: { id: evalRow.id },
+        data: {
+          status: "SUBMITTED",
+          payloadJson,
+        },
+      });
     });
 
-    await prisma.evaluation.update({
-      where: { id: evalRow.id },
-      data: { status: "SUBMITTED", payloadJson },
-    });
+    // Keep outside the transaction: if the column is missing (DB not migrated), submit still succeeds.
+    try {
+      await prisma.$executeRaw`
+        UPDATE "Evaluation"
+        SET "submit1701aCount" = COALESCE("submit1701aCount", 0) + 1
+        WHERE id = ${evalRow.id}
+      `;
+    } catch (e) {
+      console.warn("SUBMIT1701A_COUNT_INCREMENT_SKIPPED", e);
+    }
 
     // Credit referrer by referred user id — does not depend on evaluation.referralEventId (often missing).
     await prisma.referralEvent.updateMany({
@@ -294,32 +313,32 @@ export async function POST(req: Request) {
 
     if (config.evaluationSubmitNotifyAdmin && notifyTo) {
       try {
+        const adminNotifyText = joinTextParagraphs([
+          `A client submitted their 1701A evaluation form.`,
+          `Evaluation ID: ${evalRow.id}
+Submitted by: ${submitterName}
+Account email: ${evalRow.user?.email ?? "(unknown)"}`,
+          `The completed form is attached as a PDF.`,
+        ]);
         await sendMailWithAttachments(
           notifyTo,
           `1701A evaluation submitted — ${submitterName}`,
-          [
-            `A client submitted their 1701A evaluation form.`,
-            ``,
-            `Evaluation ID: ${evalRow.id}`,
-            `Submitted by: ${submitterName}`,
-            `Account email: ${evalRow.user?.email ?? "(unknown)"}`,
-            ``,
-            `The completed form is attached as a PDF.`,
-          ].join("\n"),
+          adminNotifyText,
           [
             {
               filename: attachmentName,
               content: pdfBuffer,
               contentType: "application/pdf",
             },
-          ]
+          ],
+          wrapEmailMainHtml(textToEmailHtmlParagraphs(adminNotifyText))
         );
       } catch (mailErr) {
         console.error("EVALUATION_SUBMIT_EMAIL_FAILED:", mailErr);
       }
     }
 
-    // Queue a client follow-up email (next 1-2 business days) with a login-protected payment link.
+    // Queue a client follow-up email (next business day) with a login-protected payment link.
     try {
       const customerEmail = evalRow.user?.email?.trim();
       const customerName = evalRow.user?.fullName?.trim() || "Client";
@@ -344,22 +363,14 @@ export async function POST(req: Request) {
               type: "EVALUATION_PAYMENT_FOLLOWUP",
               toEmail: customerEmail,
               subject: "Your 1701A evaluation is received — payment link",
-              body: [
+              body: joinTextParagraphs([
                 `Hello ${customerName},`,
-                ``,
                 `Thank you — we have received your BIR Form 1701A evaluation.`,
-                `Our team will review your submission and send the next steps within 1-2 business days.`,
-                ``,
-                `When advised to proceed, open this link (sign in if asked — you will be returned to Payment):`,
-                paymentUrl,
-                ``,
+                `Our team will review your submission and send the next steps; evaluation typically takes 24 hours to complete.`,
+                `When advised to proceed, open this link (sign in if asked — you will be returned to Payment):\n${paymentUrl}`,
                 `If you already have a billing link with a quote code in your email, use that link instead; it opens your bill after sign-in.`,
-                ``,
-                `Sincerely,`,
-                `Reiner`,
-                ``,
-                `${config.siteName}`,
-              ].join("\n"),
+                `${emailSignatureText("Reiner")}\n${config.siteName}`,
+              ]),
               sendAt,
               evaluationId: evalRow.id,
               userId: userId,

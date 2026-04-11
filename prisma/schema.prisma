@@ -198,6 +198,9 @@ model Evaluation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Increments on each successful 1701A portal submit (first = 1). Used in admin list to flag resubmissions.
+  submit1701aCount Int @default(0)
+
   status  String  @default("DRAFT") // DRAFT | SUBMITTED | IN_REVIEW | DONE
   taxYear String?
   // Saved form data (draft/submitted). Stored here even when no PDF is generated.

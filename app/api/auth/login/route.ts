@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
     const nextPath = safePostLoginPath(nextRaw);
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath));
+    if (!user) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath), 303);
 
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath));
+    if (!ok) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath), 303);
 
     const jar = cookies();
     const cookieRaw = jar.get(LOGIN_RETURN_TO_COOKIE)?.value;
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Prefer explicit `next` from the form so payment-page inline login beats a stale prepare-login cookie.
     const to = nextPath || fromCookie || "/account";
 
-    const res = NextResponse.redirect(absoluteUrlForInternalPath(request, to));
+    const res = NextResponse.redirect(absoluteUrlForInternalPath(request, to), 303);
     applyUserSessionToResponse(res, user.id);
     res.cookies.set(LOGIN_RETURN_TO_COOKIE, "", {
       httpOnly: true,
@@ -57,6 +57,6 @@ export async function POST(request: NextRequest) {
     u.pathname = "/login";
     u.search = "";
     u.searchParams.set("error", "server");
-    return NextResponse.redirect(u);
+    return NextResponse.redirect(u, 303);
   }
 }

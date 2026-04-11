@@ -4,7 +4,7 @@
   --muted: #556070;
   --line: #e7ecf2;
   --card: #f8fafc;
-  --primary: #1f3a8a;
+  --primary: #1e40af;
   --primary2: #0f172a;
 }
 
@@ -172,7 +172,7 @@ main.publicPage .publicInsetBox {
 
 /* Same blue CTA as home hero “Check If Your 1701A Needs Correction” */
 .headerInner .navRight a.btnHeaderCta {
-  background: #1e40af;
+  background: var(--primary);
   color: #fff;
   padding: 12px 18px;
   border-radius: 12px;
@@ -294,6 +294,13 @@ a.btn:hover { filter: brightness(0.95); }
 .footerGrid { max-width: 1100px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 14px; }
 .footerTitle { font-weight: 700; margin-bottom: 10px; }
 .footerGrid a { display: block; color: var(--muted); margin: 6px 0; font-size: 14px; }
+/* Match link column text — paragraphs were inheriting ~16px from body */
+.footerGrid p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
 .footerBottom { max-width: 1100px; margin: 0 auto; padding: 10px 20px 18px; border-top: 1px solid var(--line); }
 
 .checkoutGrid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px; }

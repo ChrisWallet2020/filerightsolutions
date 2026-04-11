@@ -197,6 +197,25 @@ function drawFormHeader(page: PDFPage, font: PDFFont, fontBold: PDFFont, pageNum
   return y;
 }
 
+/** Portal submit ordinal for this evaluation (1 = first). Shown when &gt; 1. */
+function drawResubmitNotice(
+  page: PDFPage,
+  font: PDFFont,
+  yStart: number,
+  submitOrdinal: number | null | undefined
+): number {
+  if (submitOrdinal == null || submitOrdinal <= 1) return yStart;
+  const text = `Resubmission — portal submit #${submitOrdinal} of this evaluation`;
+  page.drawText(text, {
+    x: M,
+    y: yStart,
+    size: 8,
+    font,
+    color: rgb(0.72, 0.35, 0.05),
+  });
+  return yStart - 13;
+}
+
 function rowPair(page: PDFPage, font: PDFFont, label: string, value: string, y: number): number {
   const line = `${label}: ${value || "—"}`;
   let yy = y;
@@ -330,7 +349,20 @@ function table2Col(
   return y;
 }
 
-export async function generate1701aPdf(payload: AnyObj) {
+export type Generate1701aPdfOptions = {
+  /** Item 11 on the PDF: always use the account login email, not the value typed on the evaluation form. */
+  accountEmail?: string | null;
+  /** Total portal submits for this evaluation (1 = first). When greater than 1, a resubmission banner prints on each page. */
+  submit1701aCount?: number | null;
+};
+
+export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aPdfOptions) {
+  const emailItem11 = (() => {
+    if (!options || !("accountEmail" in options)) return str(payload.email);
+    const a = options.accountEmail;
+    if (a != null && String(a).trim() !== "") return str(a);
+    return "";
+  })();
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -342,6 +374,7 @@ export async function generate1701aPdf(payload: AnyObj) {
   let y = PAGE_H - M;
 
   y = drawFormHeader(p1, font, fontBold, 1, y);
+  y = drawResubmitNotice(p1, font, y, options?.submit1701aCount);
 
   p1.drawText("PART I — BACKGROUND INFORMATION ON TAXPAYER/FILER", { x: M, y, size: 9, font: fontBold });
   y -= LINE + 2;
@@ -361,7 +394,7 @@ export async function generate1701aPdf(payload: AnyObj) {
       { no: "9", label: "Registered Address", value: str(payload.address) },
       { no: "9A", label: "Zip Code", value: str(payload.zip) },
       { no: "10", label: "Date of Birth (MM/DD/YYYY)", value: str(payload.dob) },
-      { no: "11", label: "Email Address", value: str(payload.email) },
+      { no: "11", label: "Email Address", value: emailItem11 },
       { no: "12", label: "Citizenship", value: str(payload.citizenship) },
       { no: "13", label: "Claiming Foreign Tax Credits?", value: yn(payload.foreignTaxCredits) },
       { no: "14", label: "Foreign Tax Number, if applicable", value: str(payload.foreignTaxNumber) },
@@ -430,6 +463,7 @@ export async function generate1701aPdf(payload: AnyObj) {
   const p2 = pdfDoc.addPage([PAGE_W, PAGE_H]);
   y = PAGE_H - M;
   y = drawFormHeader(p2, font, fontBold, 2, y);
+  y = drawResubmitNotice(p2, font, y, options?.submit1701aCount);
 
   if (hasPart4Object(payload)) {
     p2.drawText("PART IV — COMPUTATION OF INCOME TAX (AS FILED)", { x: M, y, size: 10, font: fontBold });

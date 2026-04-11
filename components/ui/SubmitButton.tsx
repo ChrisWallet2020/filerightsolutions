@@ -10,6 +10,11 @@ type SubmitButtonProps = {
   style?: CSSProperties;
   /** Use on light gray/white buttons so the spinner is visible */
   spinnerOnLightBg?: boolean;
+  /**
+   * When set, drives the pending UI (spinner + disabled) instead of relying only on `useFormStatus`.
+   * Use for fetch-based submits where the browser does not keep the form in React’s “transition pending” state.
+   */
+  pendingExternal?: boolean;
 };
 
 /**
@@ -21,12 +26,19 @@ export function SubmitButton({
   className = "btn",
   style,
   spinnerOnLightBg = false,
+  pendingExternal,
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
+  const isPending = pendingExternal ?? pending;
 
   return (
-    <button type="submit" className={`${className}${pending ? " btnIsPending" : ""}`} disabled={pending} style={style}>
-      {pending ? (
+    <button
+      type="submit"
+      className={`${className}${isPending ? " btnIsPending" : ""}`}
+      disabled={isPending}
+      style={style}
+    >
+      {isPending ? (
         <span className="btnWithSpinner">
           <span className={`btnSpinner${spinnerOnLightBg ? " btnSpinner--onLight" : ""}`} aria-hidden />
           {pendingLabel ?? children}

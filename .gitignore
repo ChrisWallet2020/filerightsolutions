@@ -12,3 +12,9 @@ out/
 *.db
 *.db-journal
 .vercel
+
+# Local uploads (evaluation PDFs, etc.)
+uploads/
+
+# TypeScript incremental
+*.tsbuildinfo

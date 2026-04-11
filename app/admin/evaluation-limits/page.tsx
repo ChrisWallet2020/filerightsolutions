@@ -75,7 +75,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 const btn: React.CSSProperties = {
-  background: "#0f172a",
+  background: "#1e40af",
   color: "white",
   border: "none",
   borderRadius: 10,

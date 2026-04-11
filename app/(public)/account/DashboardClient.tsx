@@ -397,9 +397,9 @@ const tabBtn: React.CSSProperties = {
 };
 
 const tabBtnActive: React.CSSProperties = {
-  background: "#0f172a",
+  background: "#1e40af",
   color: "white",
-  border: "1px solid #0f172a",
+  border: "1px solid #1e40af",
 };
 
 const card: React.CSSProperties = {
@@ -536,12 +536,12 @@ const mono: React.CSSProperties = {
 };
 
 const btnPrimary: React.CSSProperties = {
-  background: "#0f172a",
+  background: "#1e40af",
   color: "white",
   padding: "10px 14px",
   borderRadius: 12,
   fontWeight: 900,
-  border: "1px solid #0f172a",
+  border: "1px solid #1e40af",
   cursor: "pointer",
 };
 

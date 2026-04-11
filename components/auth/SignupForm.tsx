@@ -58,9 +58,16 @@ export default function SignupForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-white font-semibold disabled:opacity-60"
+        className={`w-full rounded-xl bg-[#1e40af] px-4 py-2 text-white font-semibold disabled:opacity-60${loading ? " btnIsPending" : ""}`}
       >
-        {loading ? "Creating..." : "Create Account"}
+        {loading ? (
+          <span className="btnWithSpinner">
+            <span className="btnSpinner" aria-hidden />
+            Creating account…
+          </span>
+        ) : (
+          "Create Account"
+        )}
       </button>
     </form>
   );

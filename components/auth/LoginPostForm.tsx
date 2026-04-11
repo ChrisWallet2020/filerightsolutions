@@ -1,8 +1,10 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { submitHtmlFormRedirect } from "@/lib/submitHtmlFormRedirect";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -31,7 +33,7 @@ const btnBlue: CSSProperties = {
 };
 
 const btnDark: CSSProperties = {
-  background: "#0f172a",
+  background: "#1e40af",
   color: "white",
   padding: "10px 14px",
   borderRadius: 10,
@@ -57,9 +59,20 @@ export function LoginPostForm({
 }) {
   const buttonStyle = variant === "dark" ? btnDark : btnBlue;
   const defaultForm: CSSProperties = { marginTop: 18, display: "grid", gap: 12 };
+  const [submitting, setSubmitting] = useState(false);
+
+  const onSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await submitHtmlFormRedirect(e.currentTarget);
+    } catch {
+      setSubmitting(false);
+    }
+  }, []);
 
   return (
-    <form method="post" action="/api/auth/login" style={formStyle ?? defaultForm}>
+    <form method="post" action="/api/auth/login" onSubmit={onSubmit} style={formStyle ?? defaultForm}>
       {nextPath ? <input type="hidden" name="next" value={nextPath} /> : null}
       <label style={{ fontSize: 14, color: "#334155" }}>
         Email
@@ -76,7 +89,7 @@ export function LoginPostForm({
           </Link>
         </div>
       ) : null}
-      <SubmitButton style={buttonStyle} pendingLabel={pendingLabel}>
+      <SubmitButton style={buttonStyle} pendingLabel={pendingLabel} pendingExternal={submitting}>
         {submitLabel}
       </SubmitButton>
     </form>

@@ -88,7 +88,8 @@ export async function sendMailWithAttachments(
   to: string,
   subject: string,
   text: string,
-  attachments: MailAttachment[]
+  attachments: MailAttachment[],
+  html?: string
 ): Promise<SendMailResult> {
   if (!hasSmtpConfig()) {
     if (process.env.NODE_ENV !== "production") {
@@ -96,6 +97,7 @@ export async function sendMailWithAttachments(
         to,
         subject,
         text,
+        html,
         files: attachments.map((a) => a.filename),
       });
       return { messageId: "DEV_LOG_ONLY" };
@@ -110,6 +112,7 @@ export async function sendMailWithAttachments(
     to,
     subject,
     text,
+    ...(html ? { html } : {}),
     attachments: attachments.map((a) => ({
       filename: a.filename,
       content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),

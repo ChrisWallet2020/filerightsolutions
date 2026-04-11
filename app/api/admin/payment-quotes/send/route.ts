@@ -11,6 +11,7 @@ import { createPaymentQuoteAdmin } from "@/lib/admin/paymentQuoteCreate";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { sendMail } from "@/lib/email/mailer";
+import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 
 const Schema = z.object({
   userEmail: z.string().email(),
@@ -48,9 +49,13 @@ export async function POST(req: Request) {
   const { userEmail, baseAmountPhp, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await findUserWith1701aSubmissionByEmail(email);
   if (!user) {
-    return NextResponse.json({ error: "user_not_found" }, { status: 404 });
+    const exists = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const err = exists ? "evaluation_not_submitted" : "user_not_found";
+    const redir = new URL("/admin/billing", req.url);
+    redir.searchParams.set("quoteError", err);
+    return NextResponse.redirect(redir, 303);
   }
 
   const { token } = await createPaymentQuoteAdmin({

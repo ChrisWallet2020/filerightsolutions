@@ -5,6 +5,7 @@ import { sendMail } from "@/lib/email/mailer";
 import { paymentReceivedEmail, uploadRequestEmail, completionEmail } from "@/lib/email/templates";
 import { EMAIL_DELAYS } from "@/lib/email/timing";
 import { config } from "@/lib/config";
+import { joinTextParagraphs, textToEmailHtmlParagraphs, wrapEmailMainHtml, emailSignatureText } from "@/lib/email/formatting";
 
 function hoursAgo(h: number) {
   return new Date(Date.now() - h * 60 * 60 * 1000);
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const r = await sendMail(e.toEmail, tpl.subject, tpl.body);
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
         continue;
@@ -66,7 +68,8 @@ export async function POST(req: Request) {
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const r = await sendMail(e.toEmail, tpl.subject, tpl.body);
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
         continue;
@@ -84,27 +87,23 @@ export async function POST(req: Request) {
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const r = await sendMail(e.toEmail, tpl.subject, tpl.body);
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
         continue;
       }
 
       if (e.type === EMAIL_TYPE.DOCUMENTS_RECEIVED) {
-        // simple short email inline
         const subject = `Documents Received – Order ${order.orderId}`;
-        const body = `Hello ${order.customerName},
-
-We have received your uploaded documents for Order ${order.orderId}.
-
-We will begin our review and computation based on the documents provided. If additional information is needed, we will contact you by email.
-
-Sincerely,
-Reiner
-${config.siteName}
-${config.supportEmail}
-`;
-        const r = await sendMail(e.toEmail, subject, body);
+        const body = joinTextParagraphs([
+          `Hello ${order.customerName},`,
+          `We have received your uploaded documents for Order ${order.orderId}.`,
+          `We will begin our review and computation based on the documents provided. If additional information is needed, we will contact you by email.`,
+          `${emailSignatureText("Reiner")}\n${config.siteName}\n${config.supportEmail}`,
+        ]);
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(body));
+        const r = await sendMail(e.toEmail, subject, body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
         continue;
@@ -119,7 +118,8 @@ ${config.supportEmail}
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const r = await sendMail(e.toEmail, tpl.subject, tpl.body);
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
         continue;

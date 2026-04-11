@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import { prisma } from "@/lib/db";
 import { getAuthedUserId } from "@/lib/auth";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
+import { emailSignatureText, joinTextParagraphs } from "@/lib/email/formatting";
 
 /**
  * Minimal PDF generator (no external libs).
@@ -96,20 +97,14 @@ function nextDayAtNineAM(start: Date): Date {
 }
 
 function buildNoReductionEmailBody(customerName: string): string {
-  return [
+  return joinTextParagraphs([
     `Dear ${customerName},`,
-    "",
     "After reviewing your details, we found no meaningful tax reduction opportunity based on applicable rules and allowable adjustments.",
-    "",
     "At this level, the available deductions, credits, and optimization strategies typically result in minimal or no material difference in the final tax payable. As part of our commitment to transparency and value, we only recommend proceeding when there is a clear and beneficial outcome for you.",
-    "",
     "For this reason, we are unable to proceed with further processing at this time.",
-    "",
     "Thank you for your understanding and for considering our services.",
-    "",
-    "Sincerely,",
-    "Reiner",
-  ].join("\n");
+    emailSignatureText("Reiner"),
+  ]);
 }
 
 export async function POST(req: Request) {
