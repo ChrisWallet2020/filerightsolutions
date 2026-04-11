@@ -254,6 +254,13 @@ main.publicPage .publicInsetBox {
   font-weight: 600;
 }
 
+/* Auth flows (forgot / reset password) */
+input.authFlowField:focus {
+  border-color: #93c5fc;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  outline: none;
+}
+
 .btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
 .btn:hover { filter: brightness(0.95); }
 .btnSecondary { background: #fff; color: var(--primary2); border: 1px solid var(--line); }
