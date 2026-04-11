@@ -78,14 +78,14 @@ export default async function CheckoutPage({ params }: { params: { packageId: st
             </label>
 
             <div className="muted">
-              Payments are processed via <strong>PayMongo</strong>.
+              Secure checkout is powered by PayMongo. Complete payment by scanning QR Ph code with GCash, Maya,
+              ShopeePay or Online Banking Apps.
             </div>
 
             <Button type="submit" className="wFull">Proceed to Secure Payment</Button>
 
             <div className="muted small">
-              You will be redirected to PayMongo to complete your payment.
-              For support: {config.supportEmail}
+              You will be redirected to PayMongo to complete your payment. For support: {config.supportEmail}
             </div>
           </form>
         </div>

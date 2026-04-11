@@ -30,7 +30,8 @@ export function Footer() {
         <div>
           <div className="footerTitle">Payments</div>
           <p className="muted">
-            Payments are processed via PayMongo.
+            Secure checkout is powered by PayMongo. Complete payment by scanning QR Ph code with GCash, Maya, ShopeePay
+            or Online Banking Apps.
           </p>
         </div>
       </div>
