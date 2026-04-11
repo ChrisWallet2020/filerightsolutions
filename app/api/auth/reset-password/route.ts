@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { clearUserSession, getAuthedUserId } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -45,6 +46,13 @@ export async function POST(req: Request) {
     await prisma.passwordResetToken.deleteMany({
       where: { userId: record.userId },
     });
+
+    // If this browser had an active session for the same account, end it so they sign in with the new password
+    // (session cookie is still valid until cleared — avoids "Sign out" in the header while the page says "go to sign in").
+    const currentUserId = getAuthedUserId();
+    if (currentUserId && currentUserId === record.userId) {
+      clearUserSession();
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

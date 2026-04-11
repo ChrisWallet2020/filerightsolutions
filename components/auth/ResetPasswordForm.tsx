@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
@@ -21,6 +21,7 @@ import {
 } from "@/components/auth/authFlowShared";
 
 export default function ResetPasswordForm() {
+  const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
 
@@ -57,6 +58,7 @@ export default function ResetPasswordForm() {
         });
 
         if (res.ok) {
+          await router.refresh();
           setDone(true);
           return;
         }
