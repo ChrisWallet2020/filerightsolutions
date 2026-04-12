@@ -1,4 +1,3 @@
-import { config } from "@/lib/config";
 import {
   BILLING_EMAIL_FOOTER_TEXT,
   billingEmailFooterHtml,
@@ -38,7 +37,6 @@ export function buildPaymentReceivedTaxFilingInProgressEmail(
 } {
   const name = clientName.trim() || "there";
   const safe = escapeHtml(name);
-  const site = config.siteName.trim() || "File Right Solutions";
   const oid = publicOrderId.trim() || "—";
   const safeOid = escapeHtml(oid);
 
@@ -47,7 +45,7 @@ export function buildPaymentReceivedTaxFilingInProgressEmail(
     `Thank you for your payment. Your tax filing is now in progress.`,
     `We will be processing your tax return shortly. Once your filing has been completed, we will notify you immediately.`,
     `For your reference, your Order ID is ${oid}.`,
-    `Thank you for trusting ${site}. We're here to make your tax filing simple, accurate, and stress-free.`,
+    `Thank you for trusting us with your tax filing. We're here to make tax filing simple, accurate, and stress-free every time.`,
     bestRegardsSignatureText("Reiner"),
     BILLING_EMAIL_FOOTER_TEXT,
   ]);
@@ -62,7 +60,7 @@ export function buildPaymentReceivedTaxFilingInProgressEmail(
       `For your reference, your Order ID is <strong>${safeOid}</strong>.`
     ),
     emailParagraphHtml(
-      `Thank you for trusting ${escapeHtml(site)}. We're here to make your tax filing simple, accurate, and stress-free.`
+      "Thank you for trusting us with your tax filing. We're here to make tax filing simple, accurate, and stress-free every time."
     ),
     bestRegardsSignatureHtml("Reiner"),
     billingEmailFooterHtml(),
