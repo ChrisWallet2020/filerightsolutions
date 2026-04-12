@@ -953,6 +953,7 @@ export default function Bir1701AFormClient({
                 <Part2DualRow
                   key={row.no}
                   label={`${row.no}  ${row.label}`}
+                  labelBold={row.no === 46 || row.no === 56 || row.no === 65}
                   a={data.part4[`${row.no}A`] ?? Z}
                   b={data.part4[`${row.no}B`] ?? Z}
                   setA={(v) => setPart4(`${row.no}A`, v)}
@@ -1302,12 +1303,14 @@ function MoneyInput({
 
 function Part2DualRow({
   label,
+  labelBold,
   a,
   b,
   setA,
   setB,
 }: {
   label: string;
+  labelBold?: boolean;
   a: string;
   b: string;
   setA: (v: string) => void;
@@ -1316,7 +1319,7 @@ function Part2DualRow({
   return (
     <div style={dualDataRow}>
       <div style={dualLabelCol}>
-        <span style={{ fontSize: 13, color: "#0f172a" }}>{label}</span>
+        <span style={{ fontSize: 13, color: "#0f172a", fontWeight: labelBold ? 700 : 400 }}>{label}</span>
       </div>
       <div style={dualMoneyCol}>
         <MoneyInput value={a} onChange={setA} width={124} />

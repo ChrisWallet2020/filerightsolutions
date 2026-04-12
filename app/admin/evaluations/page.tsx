@@ -1,6 +1,7 @@
 // app/admin/evaluations/page.tsx
 import Link from "next/link";
 import { SyncReferralCreditsForm } from "@/components/admin/SyncReferralCreditsForm";
+import { isAdminEvalPdfDownloadCurrent } from "@/lib/admin/adminEvalPdfDownload";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -77,6 +78,23 @@ export default async function AdminEvaluationsPage({
                       style={{ display: "inline-flex", color: "#b45309" }}
                     >
                       <ResubmitNoticeIcon />
+                    </span>
+                  ) : null}
+                  {isAdminEvalPdfDownloadCurrent(s) && s.adminPdfDownloadedAt ? (
+                    <span
+                      title={`PDF fetched ${new Date(s.adminPdfDownloadedAt).toLocaleString()}`}
+                      style={{
+                        marginLeft: 6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#15803d",
+                        padding: "2px 8px",
+                        borderRadius: 8,
+                        background: "#dcfce7",
+                        border: "1px solid #bbf7d0",
+                      }}
+                    >
+                      Downloaded
                     </span>
                   ) : null}
                 </div>

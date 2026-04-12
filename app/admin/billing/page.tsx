@@ -44,7 +44,8 @@ export default async function AdminBillingPage({
     <section className="section">
       <h1>Billing &amp; quotes</h1>
       <p className="muted">
-        Enter the email of a client who has already <b>submitted</b> their 1701A evaluation, plus the service fee.{" "}
+        Search by client <b>full name</b> (they must have already <b>submitted</b> their 1701A evaluation). The billing
+        email is sent to their sign-in email. Enter the service fee.{" "}
         <b>Send billing email</b> creates the quote and sends the payment email. You can attach up to three images if
         needed.
       </p>

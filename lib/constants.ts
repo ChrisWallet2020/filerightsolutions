@@ -19,6 +19,8 @@ export const EMAIL_TYPE = {
   WORK_STARTED: "WORK_STARTED",
   COMPLETION: "COMPLETION",
   REFUND_APPROVED: "REFUND_APPROVED",
+  /** Filing-processed notice; sent once when a quoted-billing order is paid (see PayMongo/Dragonpay webhooks). */
+  FILING_COMPLETE_NOTIFY: "FILING_COMPLETE_NOTIFY",
 } as const;
 
 export type EmailType = (typeof EMAIL_TYPE)[keyof typeof EMAIL_TYPE];

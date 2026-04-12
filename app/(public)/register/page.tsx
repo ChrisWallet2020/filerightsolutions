@@ -1,4 +1,10 @@
 import { RegisterPostForm } from "@/components/auth/RegisterPostForm";
+import { config } from "@/lib/config";
+
+export const metadata = {
+  title: "Create account",
+  description: `Create a ${config.brandName} account to submit evaluations, referrals, and tax filing requests.`,
+};
 
 export default function RegisterPage({
   searchParams,

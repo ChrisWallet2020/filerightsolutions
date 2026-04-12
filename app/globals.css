@@ -159,16 +159,55 @@ main.publicPage .publicInsetBox {
 .wFull { width: 100%; }
 
 .header { border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 30; }
-.headerInner { max-width: 1100px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.brand { display: flex; gap: 10px; align-items: center; }
-.brandMark { background: var(--primary); color: #fff; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; font-weight: 700; }
+.headerInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Avoid flex `gap` here — some in-app / older browsers ignore it and collapse the header. */
+}
+.brand { display: flex; align-items: center; }
+.brandMark {
+  margin-right: 10px;
+  background: var(--primary);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .brandName { font-weight: 700; }
 
-.navDesktop { display: flex; gap: 14px; }
-.navDesktop a { color: var(--muted); font-size: 14px; }
-.navDesktop a:hover { color: var(--fg); }
+/* Margins instead of flex `gap` — Gmail/Facebook in-app browsers and older Safari often ignore `gap`. */
+.navDesktop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.navDesktop a {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 4px 18px 4px 0;
+}
+.navDesktop a:last-child {
+  margin-right: 0;
+}
+.navDesktop a:hover {
+  color: var(--fg);
+}
 
-.navRight { display: flex; align-items: center; gap: 10px; }
+.navRight {
+  display: flex;
+  align-items: center;
+}
+.navRight > * + * {
+  margin-left: 10px;
+}
 
 /* Same blue CTA as home hero “Check If Your 1701A Needs Correction” */
 .headerInner .navRight a.btnHeaderCta {

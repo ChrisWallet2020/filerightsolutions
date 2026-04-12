@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
 import { verifyPaymongoWebhookSignature } from "@/lib/paymongo/verifyWebhook";
+import { sendFilingCompleteNotifyIfQuotedOrderPaid } from "@/lib/email/sendFilingCompleteNotifyOnQuotedOrderPaid";
 
 /** Browsers and crawlers often GET this URL; PayMongo delivers events via POST only. */
 export async function GET() {
@@ -59,7 +60,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing_reference_number" }, { status: 400 });
   }
 
-  const order = await prisma.order.findUnique({ where: { orderId: referenceNumber } });
+  const order = await prisma.order.findUnique({
+    where: { orderId: referenceNumber },
+    include: { pkg: { select: { code: true } } },
+  });
   if (!order) return NextResponse.json({ error: "order_not_found" }, { status: 404 });
 
   await prisma.payment.create({
@@ -112,6 +116,10 @@ export async function POST(req: Request) {
         subject: `Final Reminder: Upload Your Tax Documents - Order ${order.orderId}`,
       },
     });
+  }
+
+  if (isPaidEvent) {
+    await sendFilingCompleteNotifyIfQuotedOrderPaid(order.id);
   }
 
   return NextResponse.json({ ok: true });

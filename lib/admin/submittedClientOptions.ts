@@ -14,5 +14,10 @@ export async function getSubmitted1701aClientOptions(): Promise<{ email: string;
       byEmail.set(em, { email: s.user.email.trim(), fullName: s.user.fullName.trim() });
     }
   }
-  return [...byEmail.values()].sort((a, b) => a.email.localeCompare(b.email));
+  return [...byEmail.values()].sort((a, b) => {
+    const na = a.fullName.toLowerCase();
+    const nb = b.fullName.toLowerCase();
+    if (na !== nb) return na.localeCompare(nb);
+    return a.email.localeCompare(b.email);
+  });
 }

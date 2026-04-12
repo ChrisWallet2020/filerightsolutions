@@ -31,6 +31,8 @@ export function SubmitButton({
   const { pending } = useFormStatus();
   const isPending = pendingExternal ?? pending;
 
+  // Keep a stable single child under <button> so pending toggles don’t swap the root node type
+  // (reduces rare React “removeChild” reconciliation errors with useFormStatus).
   return (
     <button
       type="submit"
@@ -38,14 +40,16 @@ export function SubmitButton({
       disabled={isPending}
       style={style}
     >
-      {isPending ? (
-        <span className="btnWithSpinner">
-          <span className={`btnSpinner${spinnerOnLightBg ? " btnSpinner--onLight" : ""}`} aria-hidden />
-          {pendingLabel ?? children}
-        </span>
-      ) : (
-        children
-      )}
+      <span className="btnWithSpinner">
+        {isPending ? (
+          <>
+            <span className={`btnSpinner${spinnerOnLightBg ? " btnSpinner--onLight" : ""}`} aria-hidden />
+            <span>{pendingLabel ?? children}</span>
+          </>
+        ) : (
+          <span>{children}</span>
+        )}
+      </span>
     </button>
   );
 }

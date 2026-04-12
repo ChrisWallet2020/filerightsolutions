@@ -109,6 +109,12 @@ export async function POST(req: Request) {
         continue;
       }
 
+      if (e.type === EMAIL_TYPE.FILING_COMPLETE_NOTIFY) {
+        // Sent synchronously from payment webhooks; should not appear as pending.
+        skipped++;
+        continue;
+      }
+
       if (e.type === EMAIL_TYPE.COMPLETION) {
         if (order.status !== ORDER_STATUS.DONE) { skipped++; continue; }
         const tpl = completionEmail({

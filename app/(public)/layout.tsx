@@ -5,9 +5,17 @@ import { getAuthedUserId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const seoSubtitle =
+  config.siteName.trim().toLowerCase() === config.brandName.trim().toLowerCase()
+    ? "Tax filing assistance for JO & COS professionals"
+    : config.siteName;
+
 export const metadata = {
-  title: config.siteName,
-  description: "Tax Filing Assistance for JO & COS Professionals"
+  title: {
+    default: `${config.brandName} — ${seoSubtitle}`,
+    template: `${config.brandName} — %s`,
+  },
+  description: "Tax Filing Assistance for JO & COS Professionals",
 };
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {

@@ -1,8 +1,14 @@
 import { LoginPostForm } from "@/components/auth/LoginPostForm";
+import { config } from "@/lib/config";
 import { safePostLoginPath } from "@/lib/postLoginRedirect";
 
 /** Must be dynamic or `next` is often missing (stale shell / caching). */
 export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Sign in",
+  description: `Sign in to your ${config.brandName} account for evaluations, billing, and tax filing assistance.`,
+};
 
 function firstString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;

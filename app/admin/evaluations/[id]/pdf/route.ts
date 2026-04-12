@@ -42,6 +42,14 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         accountEmail: sub.evaluation.user?.email ?? null,
         submit1701aCount: sub.evaluation.submit1701aCount ?? null,
       });
+      const submitOrdinal = sub.evaluation.submit1701aCount ?? 0;
+      await prisma.evaluation1701ASubmission.update({
+        where: { evaluationId },
+        data: {
+          adminPdfDownloadedAt: new Date(),
+          adminPdfDownloadedSubmitOrdinal: submitOrdinal,
+        },
+      });
       const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
       return new NextResponse(Buffer.from(pdfBytes), {
         headers: {
@@ -64,6 +72,14 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
   try {
     const bytes = await fs.readFile(sub.pdfPath);
+    const submitOrdinal = sub.evaluation.submit1701aCount ?? 0;
+    await prisma.evaluation1701ASubmission.update({
+      where: { evaluationId },
+      data: {
+        adminPdfDownloadedAt: new Date(),
+        adminPdfDownloadedSubmitOrdinal: submitOrdinal,
+      },
+    });
     const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
     return new NextResponse(bytes, {
       headers: {

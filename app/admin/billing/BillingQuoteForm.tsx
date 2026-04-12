@@ -3,6 +3,9 @@
 import { useRef, useState, type FormEvent } from "react";
 import { AdminClientEmailCombobox, type AdminClientEmailOption } from "@/components/admin/AdminClientEmailCombobox";
 
+const CLIENT_PICK_REQUIRED =
+  "Choose a client from the list, or type their full name (or sign-in email) until it matches exactly.";
+
 const PREVIEW_ERR: Record<string, string> = {
   user_not_found: "Preview failed: no registered account matches the client email.",
   evaluation_not_submitted:
@@ -35,6 +38,10 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
     setPreviewing(true);
     try {
       const fd = new FormData(form);
+      if (!fd.get("userEmail")?.toString().trim()) {
+        setPreviewBanner(CLIENT_PICK_REQUIRED);
+        return;
+      }
       const res = await fetch("/api/admin/payment-quotes/preview", {
         method: "POST",
         body: fd,
@@ -77,6 +84,11 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
     e.preventDefault();
     const form = e.currentTarget;
     setSendBanner(null);
+    const fd0 = new FormData(form);
+    if (!fd0.get("userEmail")?.toString().trim()) {
+      setSendBanner(CLIENT_PICK_REQUIRED);
+      return;
+    }
     setSending(true);
     let navigated = false;
     try {
@@ -131,17 +143,18 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
           encType="multipart/form-data"
           onSubmit={(ev) => void handleSend(ev)}
         >
-          <label>
-            Client email (must have submitted 1701A evaluation)
+          <label style={{ display: "grid", gap: 8 }}>
+            <strong>Client Name</strong>
             <AdminClientEmailCombobox
               options={submittedClients}
               inputName="userEmail"
               required
-              placeholder="client@example.com"
+              variant="name"
+              placeholder="Search by name…"
             />
           </label>
-          <label>
-            Service Fee (PHP)
+          <label style={{ display: "grid", gap: 8 }}>
+            <strong>Service Fee (PHP)</strong>
             <input name="baseAmountPhp" type="number" min={1} step={1} required placeholder="3500" />
           </label>
           <label>

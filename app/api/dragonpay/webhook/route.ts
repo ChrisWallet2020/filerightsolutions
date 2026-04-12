@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyDragonpayPayload } from "@/lib/dragonpay/verify";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
+import { sendFilingCompleteNotifyIfQuotedOrderPaid } from "@/lib/email/sendFilingCompleteNotifyOnQuotedOrderPaid";
 
 export async function POST(req: Request) {
   if (!config.dragonpay.secret) {
@@ -93,6 +94,14 @@ export async function POST(req: Request) {
       subject: `Final Reminder: Upload Your Tax Documents – Order ${order.orderId}`
     }
   });
+
+  const paidOrder = await prisma.order.findUnique({
+    where: { id: order.id },
+    select: { id: true, status: true },
+  });
+  if (paidOrder?.status === ORDER_STATUS.PAID) {
+    await sendFilingCompleteNotifyIfQuotedOrderPaid(order.id);
+  }
 
   return NextResponse.json({ ok: true, uploadLink });
 }

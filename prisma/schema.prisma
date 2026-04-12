@@ -223,6 +223,11 @@ model Evaluation1701ASubmission {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
+  /// Last successful GET /admin/evaluations/[id]/pdf (admin fetched PDF).
+  adminPdfDownloadedAt DateTime?
+  /// `Evaluation.submit1701aCount` when `adminPdfDownloadedAt` was set; must match current count to show “Downloaded” after resubmits.
+  adminPdfDownloadedSubmitOrdinal Int?
+
   // FULL FORM DATA (JSON string)
   payloadJson String
 

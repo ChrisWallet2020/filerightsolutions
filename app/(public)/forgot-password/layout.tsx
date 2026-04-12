@@ -1,7 +1,7 @@
 import { config } from "@/lib/config";
 
 export const metadata = {
-  title: `Forgot password — ${config.siteName}`,
+  title: "Forgot password",
   description: "Request a link to reset your password.",
 };
 

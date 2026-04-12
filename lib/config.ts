@@ -7,6 +7,8 @@ function normalizeSiteBaseUrl(): string {
 }
 
 export const config = {
+  /** Legal / SEO brand (search titles use this first). */
+  brandName: process.env.NEXT_PUBLIC_BRAND_NAME || "FileRight Solutions",
   siteName: process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance",
   supportEmail: process.env.SUPPORT_EMAIL || "support@filerightsolutions.com",
   /**

@@ -3,24 +3,20 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NavigationProgress } from "@/components/site/NavigationProgress";
 
-const siteIcons: Metadata["icons"] = {
-  icon: "/icon.png",
-  apple: "/apple-icon.png",
-};
+/** Icons: `app/icon.png` and `app/apple-icon.png` are picked up automatically by Next.js (better for Google favicon). */
 
 /** Sets absolute URLs for Open Graph / Twitter when SITE_BASE_URL is your live domain. */
 export async function generateMetadata(): Promise<Metadata> {
   const base = process.env.SITE_BASE_URL?.trim();
   if (!base?.startsWith("http")) {
-    return { icons: siteIcons };
+    return {};
   }
   try {
     return {
       metadataBase: new URL(base.replace(/\/+$/, "")),
-      icons: siteIcons,
     };
   } catch {
-    return { icons: siteIcons };
+    return {};
   }
 }
 

@@ -122,7 +122,8 @@ function drawPart4Sections(
       const rawLabel = str(r.label);
       const lab = rawLabel.length > 54 ? rawLabel.slice(0, 52) + "…" : rawLabel;
       page.drawText(String(r.no), { x: noX, y, size: 7, font: fontBold });
-      page.drawText(lab, { x: labelX, y, size: 7, font });
+      const labelFont = r.no === 46 || r.no === 56 || r.no === 65 ? fontBold : font;
+      page.drawText(lab, { x: labelX, y, size: 7, font: labelFont });
       page.drawText(a || "0.00", { x: aX, y, size: 7, font });
       page.drawText(b || "0.00", { x: bX, y, size: 7, font });
       y -= 9;
