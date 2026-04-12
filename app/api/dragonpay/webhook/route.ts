@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyDragonpayPayload } from "@/lib/dragonpay/verify";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
-import { sendFilingCompleteNotifyIfQuotedOrderPaid } from "@/lib/email/sendFilingCompleteNotifyOnQuotedOrderPaid";
+import { sendPaymentReceivedTaxFilingInProgressForOrder } from "@/lib/email/sendPaymentReceivedTaxFilingInProgress";
 
 export async function POST(req: Request) {
   if (!config.dragonpay.secret) {
@@ -37,11 +37,13 @@ export async function POST(req: Request) {
   const order = await prisma.order.findUnique({ where: { orderId } });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
+  const becamePaid = order.status !== ORDER_STATUS.PAID;
+
   // Idempotent transition
-  if (order.status !== ORDER_STATUS.PAID) {
+  if (becamePaid) {
     await prisma.order.update({
       where: { id: order.id },
-      data: { status: ORDER_STATUS.PAID, paidAt: new Date() }
+      data: { status: ORDER_STATUS.PAID, paidAt: new Date() },
     });
   }
 
@@ -61,16 +63,14 @@ export async function POST(req: Request) {
   const pkg = await prisma.servicePackage.findUnique({ where: { id: order.packageId } });
   const uploadLink = `${config.baseUrl}/upload/${order.uploadToken}`;
 
-  await prisma.emailLog.upsert({
-    where: { orderId_type: { orderId: order.id, type: EMAIL_TYPE.PAYMENT_RECEIVED } },
-    update: {},
-    create: {
-      orderId: order.id,
-      type: EMAIL_TYPE.PAYMENT_RECEIVED,
-      toEmail: order.customerEmail,
-      subject: `Payment Received – Order ${order.orderId}`
-    }
-  });
+  if (becamePaid) {
+    await sendPaymentReceivedTaxFilingInProgressForOrder({
+      id: order.id,
+      orderId: order.orderId,
+      customerEmail: order.customerEmail,
+      customerName: order.customerName,
+    });
+  }
 
   // We’ll use reminders instead of immediate 2nd email to avoid back-to-back.
   await prisma.emailLog.upsert({
@@ -94,14 +94,6 @@ export async function POST(req: Request) {
       subject: `Final Reminder: Upload Your Tax Documents – Order ${order.orderId}`
     }
   });
-
-  const paidOrder = await prisma.order.findUnique({
-    where: { id: order.id },
-    select: { id: true, status: true },
-  });
-  if (paidOrder?.status === ORDER_STATUS.PAID) {
-    await sendFilingCompleteNotifyIfQuotedOrderPaid(order.id);
-  }
 
   return NextResponse.json({ ok: true, uploadLink });
 }

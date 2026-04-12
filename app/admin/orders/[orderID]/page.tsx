@@ -2,17 +2,9 @@ import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/Button";
 import { config } from "@/lib/config";
 import { isAdminAuthed } from "@/lib/auth";
-import { ORDER_STATUS } from "@/lib/constants";
-import { QUOTED_BILLING_CODE } from "@/lib/quotedBillingPackage";
 import { redirect } from "next/navigation";
 
-export default async function OrderDetail({
-  params,
-  searchParams,
-}: {
-  params: { orderID: string };
-  searchParams?: Record<string, string | string[] | undefined>;
-}) {
+export default async function OrderDetail({ params }: { params: { orderID: string } }) {
   if (!isAdminAuthed()) redirect("/admin/login");
 
   const order = await prisma.order.findUnique({
@@ -22,23 +14,10 @@ export default async function OrderDetail({
   if (!order) return <section className="section">Order not found.</section>;
 
   const uploadLink = `${config.baseUrl}/upload/${order.uploadToken}`;
-  const filingParam = typeof searchParams?.filingEmail === "string" ? searchParams.filingEmail : "";
 
   return (
     <section className="section">
       <h1>{order.orderId}</h1>
-      {filingParam === "attempted" ? (
-        <p className="notice" style={{ marginTop: 12, maxWidth: 720 }}>
-          Filing confirmation send was requested. Check <b>Email Queue</b> below for{" "}
-          <code>FILING_COMPLETE_NOTIFY</code> (Sent or Failed). If nothing changed, the order may not be quoted billing
-          or the client email may not match a user with a submitted 1701A evaluation.
-        </p>
-      ) : null}
-      {filingParam === "not_paid" ? (
-        <p className="notice" style={{ marginTop: 12, maxWidth: 720, borderColor: "#fecaca", background: "#fef2f2" }}>
-          Filing confirmation is only sent for orders in <b>PAID</b> status.
-        </p>
-      ) : null}
       <div className="muted">Upload link: <a className="link" href={uploadLink}>{uploadLink}</a></div>
 
       <div className="grid2">
@@ -73,21 +52,6 @@ export default async function OrderDetail({
           </label>
           <Button type="submit">Save</Button>
         </form>
-        {order.pkg.code === QUOTED_BILLING_CODE && order.status === ORDER_STATUS.PAID ? (
-          <form
-            action="/api/admin/orders/send-filing-confirmation"
-            method="post"
-            style={{ marginTop: 16, maxWidth: 520 }}
-          >
-            <input type="hidden" name="orderId" value={order.orderId} />
-            <p className="muted small" style={{ margin: "0 0 8px" }}>
-              If the client did not receive the filing confirmation, send again (skipped if already sent successfully).
-            </p>
-            <Button type="submit" variant="secondary">
-              Send filing confirmation email
-            </Button>
-          </form>
-        ) : null}
       </div>
 
       <div className="section">

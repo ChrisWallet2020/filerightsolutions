@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
 import { verifyPaymongoWebhookSignature } from "@/lib/paymongo/verifyWebhook";
-import { sendFilingCompleteNotifyIfQuotedOrderPaid } from "@/lib/email/sendFilingCompleteNotifyOnQuotedOrderPaid";
+import { sendPaymentReceivedTaxFilingInProgressForOrder } from "@/lib/email/sendPaymentReceivedTaxFilingInProgress";
 
 /** Browsers and crawlers often GET this URL; PayMongo delivers events via POST only. */
 export async function GET() {
@@ -60,10 +60,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing_reference_number" }, { status: 400 });
   }
 
-  const order = await prisma.order.findUnique({
-    where: { orderId: referenceNumber },
-    include: { pkg: { select: { code: true } } },
-  });
+  const order = await prisma.order.findUnique({ where: { orderId: referenceNumber } });
   if (!order) return NextResponse.json({ error: "order_not_found" }, { status: 404 });
 
   await prisma.payment.create({
@@ -84,15 +81,11 @@ export async function POST(req: Request) {
       data: { status: ORDER_STATUS.PAID, paidAt: new Date() },
     });
 
-    await prisma.emailLog.upsert({
-      where: { orderId_type: { orderId: order.id, type: EMAIL_TYPE.PAYMENT_RECEIVED } },
-      update: {},
-      create: {
-        orderId: order.id,
-        type: EMAIL_TYPE.PAYMENT_RECEIVED,
-        toEmail: order.customerEmail,
-        subject: `Payment Received - Order ${order.orderId}`,
-      },
+    await sendPaymentReceivedTaxFilingInProgressForOrder({
+      id: order.id,
+      orderId: order.orderId,
+      customerEmail: order.customerEmail,
+      customerName: order.customerName,
     });
 
     await prisma.emailLog.upsert({
@@ -116,10 +109,6 @@ export async function POST(req: Request) {
         subject: `Final Reminder: Upload Your Tax Documents - Order ${order.orderId}`,
       },
     });
-  }
-
-  if (isPaidEvent) {
-    await sendFilingCompleteNotifyIfQuotedOrderPaid(order.id);
   }
 
   return NextResponse.json({ ok: true });

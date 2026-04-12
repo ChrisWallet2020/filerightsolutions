@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { sendMail } from "@/lib/email/mailer";
-import { paymentReceivedEmail, uploadRequestEmail, completionEmail } from "@/lib/email/templates";
+import { uploadRequestEmail, completionEmail } from "@/lib/email/templates";
+import { buildPaymentReceivedTaxFilingInProgressEmail } from "@/lib/email/paymentReceivedInProgressEmail";
 import { EMAIL_DELAYS } from "@/lib/email/timing";
 import { config } from "@/lib/config";
 import { joinTextParagraphs, textToEmailHtmlParagraphs, wrapEmailMainHtml, emailSignatureText } from "@/lib/email/formatting";
@@ -42,15 +43,8 @@ export async function POST(req: Request) {
     try {
       if (e.type === EMAIL_TYPE.PAYMENT_RECEIVED) {
         if (order.status !== ORDER_STATUS.PAID || !order.paidAt) { skipped++; continue; }
-        const tpl = paymentReceivedEmail({
-          clientName: order.customerName,
-          orderId: order.orderId,
-          serviceName: order.pkg.name,
-          amountPhp: order.amountPhp,
-          uploadLink
-        });
-        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
-        const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
+        const tpl = buildPaymentReceivedTaxFilingInProgressEmail(order.customerName, order.orderId);
+        const r = await sendMail(e.toEmail, tpl.subject, tpl.textBody, tpl.htmlBody);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
         continue;
@@ -106,12 +100,6 @@ export async function POST(req: Request) {
         const r = await sendMail(e.toEmail, subject, body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
-        continue;
-      }
-
-      if (e.type === EMAIL_TYPE.FILING_COMPLETE_NOTIFY) {
-        // Sent synchronously from payment webhooks; should not appear as pending.
-        skipped++;
         continue;
       }
 

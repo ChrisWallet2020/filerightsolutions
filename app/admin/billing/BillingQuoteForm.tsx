@@ -143,7 +143,7 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
           encType="multipart/form-data"
           onSubmit={(ev) => void handleSend(ev)}
         >
-          <label style={{ display: "grid", gap: 8 }}>
+          <label>
             <strong>Client Name</strong>
             <AdminClientEmailCombobox
               options={submittedClients}
@@ -153,8 +153,8 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
               placeholder="Search by name…"
             />
           </label>
-          <label style={{ display: "grid", gap: 8 }}>
-            <strong>Service Fee (PHP)</strong>
+          <label>
+            <strong>Service Fee (PhP)</strong>
             <input name="baseAmountPhp" type="number" min={1} step={1} required placeholder="3500" />
           </label>
           <label>

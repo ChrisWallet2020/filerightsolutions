@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-export type AdminClientEmailOption = { email: string; fullName: string };
+export type AdminClientEmailOption = {
+  email: string;
+  fullName: string;
+  /** ISO 8601 — optional; filing confirmation UI uses for “last sent”. */
+  lastFilingNotifySentAt?: string | null;
+};
 
 /** Primary label for pickers; disambiguates duplicate full names with email in parentheses. */
 export function optionDisplayLabel(c: AdminClientEmailOption, options: AdminClientEmailOption[]): string {
@@ -12,26 +17,19 @@ export function optionDisplayLabel(c: AdminClientEmailOption, options: AdminClie
   return dup ? `${name} (${c.email})` : name;
 }
 
-function fullNameHasDuplicate(fullName: string, options: AdminClientEmailOption[]): boolean {
-  const n = fullName.trim().toLowerCase();
-  if (!n) return false;
-  return options.filter((o) => o.fullName.trim().toLowerCase() === n).length > 1;
+function isDuplicateFullName(c: AdminClientEmailOption, options: AdminClientEmailOption[]): boolean {
+  const n = c.fullName.trim().toLowerCase();
+  return Boolean(n && options.filter((o) => o.fullName.trim().toLowerCase() === n).length > 1);
 }
 
-function NameVariantSuggestionRow({
-  c,
-  options,
-}: {
-  c: AdminClientEmailOption;
-  options: AdminClientEmailOption[];
-}) {
-  const displayName = c.fullName.trim() || c.email;
-  const dup = fullNameHasDuplicate(c.fullName, options);
+function OptionNameRow({ c, options }: { c: AdminClientEmailOption; options: AdminClientEmailOption[] }) {
+  const name = c.fullName.trim() || c.email;
+  const dup = isDuplicateFullName(c, options);
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 8 }}>
-      <span style={{ fontWeight: 700 }}>{displayName}</span>
+    <div style={{ fontSize: 14, lineHeight: 1.35 }}>
+      <span style={{ fontWeight: 700 }}>{name}</span>
       {dup ? (
-        <span style={{ fontWeight: 400, fontSize: 13, color: "#64748b" }}>{c.email}</span>
+        <span style={{ fontWeight: 400, color: "#64748b" }}> ({c.email})</span>
       ) : null}
     </div>
   );
@@ -55,18 +53,18 @@ function tryResolveClientEmail(
   return null;
 }
 
+type NameKind = "none" | "form" | "controlled";
+
 type Props = {
   options: AdminClientEmailOption[];
-  /** Set for native form posts (e.g. billing `userEmail`). Omit when using controlled mode only. */
   inputName?: string;
   required?: boolean;
   placeholder?: string;
-  /** Controlled value (e.g. filing preview flow). */
   value?: string;
   onChange?: (email: string) => void;
   /**
-   * `name` = search/select by full name; sign-in email is still posted as `inputName` (hidden field).
-   * Only applies with `inputName` and without controlled `value`; otherwise treated as `email`.
+   * `name` = search/select by full name. With `inputName` (no `value`) uses a hidden field for email.
+   * With controlled `value` + `onChange`, email is held in parent state.
    */
   variant?: "email" | "name";
 };
@@ -83,14 +81,28 @@ export function AdminClientEmailCombobox({
   variant: variantProp = "email",
 }: Props) {
   const isControlled = controlledValue !== undefined;
-  const effectiveVariant =
-    variantProp === "name" && !isControlled && inputName ? "name" : "email";
+
+  const nameKind: NameKind =
+    variantProp === "name" && inputName && !isControlled
+      ? "form"
+      : variantProp === "name" && isControlled && controlledOnChange
+        ? "controlled"
+        : "none";
 
   const [inner, setInner] = useState("");
   const [nameQuery, setNameQuery] = useState("");
   const [committedEmail, setCommittedEmail] = useState("");
 
   const email = isControlled ? controlledValue! : inner;
+
+  // When `email` is cleared while typing, do not reset `nameQuery` here (parent clears `email` on each keystroke).
+  useEffect(() => {
+    if (nameKind !== "controlled") return;
+    const em = (controlledValue ?? "").trim().toLowerCase();
+    if (!em) return;
+    const opt = options.find((o) => o.email.toLowerCase() === em);
+    setNameQuery(opt ? optionDisplayLabel(opt, options) : (controlledValue ?? "").trim());
+  }, [nameKind, controlledValue, options]);
 
   function setEmail(v: string) {
     controlledOnChange?.(v);
@@ -101,9 +113,7 @@ export function AdminClientEmailCombobox({
 
   const filtered = useMemo(() => {
     const q =
-      effectiveVariant === "name"
-        ? nameQuery.trim().toLowerCase()
-        : email.trim().toLowerCase();
+      nameKind !== "none" ? nameQuery.trim().toLowerCase() : email.trim().toLowerCase();
     if (!q) return options.slice(0, MAX_SUGGESTIONS);
     return options
       .filter((c) => {
@@ -115,12 +125,15 @@ export function AdminClientEmailCombobox({
         );
       })
       .slice(0, MAX_SUGGESTIONS);
-  }, [email, nameQuery, options, effectiveVariant]);
+  }, [email, nameQuery, options, nameKind]);
 
   function pickClient(c: AdminClientEmailOption) {
-    if (effectiveVariant === "name") {
+    if (nameKind === "form") {
       setCommittedEmail(c.email);
       setNameQuery(optionDisplayLabel(c, options));
+    } else if (nameKind === "controlled") {
+      setNameQuery(optionDisplayLabel(c, options));
+      controlledOnChange?.(c.email);
     } else {
       setEmail(c.email);
     }
@@ -131,23 +144,27 @@ export function AdminClientEmailCombobox({
     window.setTimeout(() => {
       setSuggestionsOpen(false);
       const resolved = tryResolveClientEmail(nameQuery, options);
-      if (resolved) {
+      if (!resolved) return;
+      if (nameKind === "form") {
         setCommittedEmail(resolved.email);
         setNameQuery(optionDisplayLabel(resolved, options));
+      } else if (nameKind === "controlled") {
+        setNameQuery(optionDisplayLabel(resolved, options));
+        controlledOnChange?.(resolved.email);
       }
     }, 180);
   }
 
-  if (effectiveVariant === "name" && inputName) {
+  if (nameKind === "form" || nameKind === "controlled") {
     return (
       <div style={{ position: "relative", maxWidth: 480 }}>
-        {/* Visible control first so a wrapping <label> targets this field, not the hidden email. */}
         <input
           type="text"
           value={nameQuery}
           onChange={(e) => {
             setNameQuery(e.target.value);
-            setCommittedEmail("");
+            if (nameKind === "form") setCommittedEmail("");
+            if (nameKind === "controlled") controlledOnChange?.("");
             setSuggestionsOpen(true);
           }}
           onFocus={() => setSuggestionsOpen(true)}
@@ -166,7 +183,9 @@ export function AdminClientEmailCombobox({
             color: "#0f172a",
           }}
         />
-        <input type="hidden" name={inputName} value={committedEmail} onChange={() => {}} />
+        {nameKind === "form" && inputName ? (
+          <input type="hidden" name={inputName} value={committedEmail} onChange={() => {}} />
+        ) : null}
         {suggestionsOpen && filtered.length > 0 ? (
           <ul
             role="listbox"
@@ -212,7 +231,7 @@ export function AdminClientEmailCombobox({
                     (e.currentTarget as HTMLButtonElement).style.background = "#fff";
                   }}
                 >
-                  <NameVariantSuggestionRow c={c} options={options} />
+                  <OptionNameRow c={c} options={options} />
                 </button>
               </li>
             ))}

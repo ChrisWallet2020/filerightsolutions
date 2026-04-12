@@ -145,6 +145,17 @@ model User {
   evaluation1701ASubmissions Evaluation1701ASubmission[]
   passwordResetTokens        PasswordResetToken[]
   paymentQuotes              PaymentQuote[]
+  filingCompleteNotifySends  FilingCompleteNotifySend[]
+}
+
+/// Admin-sent “filing processed” notification; used for “last sent” on filing email UI.
+model FilingCompleteNotifySend {
+  id     String   @id @default(cuid())
+  sentAt DateTime @default(now())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
 }
 
 model PaymentQuote {

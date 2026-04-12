@@ -11,33 +11,6 @@ export type EmailVars = {
   yourName?: string;
 };
 
-function peso(n: number) {
-  return `₱${(n / 100).toFixed(2)}`.replace(".00", "");
-}
-
-export function paymentReceivedEmail(v: EmailVars) {
-  const subject = `Payment Received – Order ${v.orderId}`;
-  const signer = v.yourName || "Reiner";
-  const org = v.businessName || config.siteName;
-  const body = joinTextParagraphs([
-    `Hello ${v.clientName},`,
-    `Thank you for your payment.`,
-    `We have successfully received your service fee for the following:`,
-    `Order ID: ${v.orderId}
-Service: ${v.serviceName}
-Amount Paid: ${peso(v.amountPhp)}
-Payment Method: PayMongo`,
-    `This payment is for professional tax filing assistance services only. It does not include government taxes, penalties, or filing fees.`,
-    `What happens next`,
-    `To proceed with your tax filing review, please upload the required documents using the secure link below:`,
-    `${v.uploadLink}`,
-    `Once your documents are received, we will begin our review and computation based on applicable BIR rules and your submitted information.`,
-    `If you have any questions, you may reply to this email or contact us at ${config.supportEmail}.`,
-    `Kind regards,\n${signer}\n${org}`,
-  ]);
-  return { subject, body };
-}
-
 export function uploadRequestEmail(v: EmailVars) {
   const subject = `Action Required: Upload Your Tax Documents – Order ${v.orderId}`;
   const signer = v.yourName || "Reiner";

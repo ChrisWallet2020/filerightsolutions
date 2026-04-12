@@ -346,8 +346,14 @@ export default async function AccountPaymentPage({
         </div>
       ) : order && order.status === ORDER_STATUS.PENDING ? (
         <p style={{ color: "#475569", marginBottom: 20, fontSize: 14, lineHeight: 1.65 }}>
-          A payment is already in progress for order <b>{order.orderId}</b>. You can continue to the payment status page
-          or try again below.
+          A payment is already in progress for order <b>{order.orderId}</b>. You can open the{" "}
+          <Link
+            href={`/payment/status?orderId=${encodeURIComponent(order.orderId)}&state=PENDING`}
+            style={{ color: "#1d4ed8", fontWeight: 700 }}
+          >
+            payment status page
+          </Link>{" "}
+          to copy your Order ID, or try again below.
         </p>
       ) : null}
 
