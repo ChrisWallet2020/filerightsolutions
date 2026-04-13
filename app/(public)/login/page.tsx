@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: { absolute: pageTitle },
   description: `Sign in to your ${config.brandName} account for evaluations, billing, and tax filing assistance.`,
   openGraph: { title: pageTitle },
+  robots: { index: false, follow: true },
 };
 
 function firstString(v: string | string[] | undefined): string | undefined {

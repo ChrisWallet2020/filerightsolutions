@@ -4,8 +4,6 @@ import {
   BILLING_EMAIL_FOOTER_TEXT,
   billingEmailFooterHtml,
   emailParagraphHtml,
-  emailSignatureHtml,
-  emailSignatureText,
   escapeHtml,
   joinTextParagraphs,
   wrapEmailMainHtml,
@@ -80,14 +78,12 @@ export function buildBillingQuoteEmail(opts: {
   ];
 
   const textBody = joinTextParagraphs([
-    `Dear ${clientFullName},`,
-    `Your tax evaluation has been completed.`,
-    `Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing the difference between your current filing and the optimized version.`,
-    `If you would like to proceed, you may complete your payment at:\n${payUrl}`,
-    `Once payment is confirmed, we will handle the correction and filing process accordingly.`,
-    `If anything in the evaluation needs clarification, feel free to reply to this email.`,
-    emailSignatureText("Reiner"),
-    `Questions? Reply to this message or contact ${config.supportEmail}.`,
+    "Your tax evaluation has been completed.",
+    "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing.",
+    `If you would like to proceed, you may complete your payment at ${payUrl}`,
+    "Once payment is confirmed, we will handle the correction and filing process accordingly.",
+    "If your taxes are negative, you may claim a refund from BIR otherwise it will be carried over as a tax credit for the next taxable year.",
+    "If anything in the evaluation needs clarification, feel free to reply to this email.",
     BILLING_EMAIL_FOOTER_TEXT,
   ]);
 
@@ -111,19 +107,19 @@ export function buildBillingQuoteEmail(opts: {
       : "";
 
   const innerHtml = [
-    emailParagraphHtml(`Dear ${escapeHtml(clientFullName)},`),
     emailParagraphHtml("Your tax evaluation has been completed."),
     emailParagraphHtml(
-      "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing the difference between your current filing and the optimized version."
+      "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing."
     ),
     emailParagraphHtml(`If you would like to proceed, you may complete your payment at ${payLinkHtml}`),
     emailParagraphHtml(
       "Once payment is confirmed, we will handle the correction and filing process accordingly."
     ),
+    emailParagraphHtml(
+      "If your taxes are negative, you may claim a refund from BIR otherwise it will be carried over as a tax credit for the next taxable year."
+    ),
     emailParagraphHtml("If anything in the evaluation needs clarification, feel free to reply to this email."),
-    emailSignatureHtml("Reiner"),
     extraNote,
-    `<p style="margin:16px 0 0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;line-height:1.55;color:#475569;">Questions? Reply to this message or contact <a href="mailto:${escapeHtml(config.supportEmail)}" style="color:#1e40af;font-weight:600;text-decoration:none;border-bottom:1px solid #cbd5e1;">${escapeHtml(config.supportEmail)}</a>.</p>`,
     billingEmailFooterHtml(),
   ].join("");
 
