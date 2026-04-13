@@ -1,8 +1,6 @@
 import { config } from "@/lib/config";
 import type { MailAttachment } from "@/lib/email/mailer";
 import {
-  BILLING_EMAIL_FOOTER_TEXT,
-  billingEmailFooterHtml,
   emailParagraphHtml,
   escapeHtml,
   joinTextParagraphs,
@@ -78,13 +76,15 @@ export function buildBillingQuoteEmail(opts: {
   ];
 
   const textBody = joinTextParagraphs([
+    `Hi ${clientFullName},`,
     "Your tax evaluation has been completed.",
     "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing.",
     `If you would like to proceed, you may complete your payment at ${payUrl}`,
     "Once payment is confirmed, we will handle the correction and filing process accordingly.",
     "If your taxes are negative, you may claim a refund from BIR otherwise it will be carried over as a tax credit for the next taxable year.",
     "If anything in the evaluation needs clarification, feel free to reply to this email.",
-    BILLING_EMAIL_FOOTER_TEXT,
+    "Sincerely,",
+    "Reiner",
   ]);
 
   const payLinkHtml = `<a href="${escapeHtml(payUrl)}">${escapeHtml(payUrl)}</a>`;
@@ -107,6 +107,7 @@ export function buildBillingQuoteEmail(opts: {
       : "";
 
   const innerHtml = [
+    emailParagraphHtml(`Hi ${escapeHtml(clientFullName)},`),
     emailParagraphHtml("Your tax evaluation has been completed."),
     emailParagraphHtml(
       "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing."
@@ -119,8 +120,8 @@ export function buildBillingQuoteEmail(opts: {
       "If your taxes are negative, you may claim a refund from BIR otherwise it will be carried over as a tax credit for the next taxable year."
     ),
     emailParagraphHtml("If anything in the evaluation needs clarification, feel free to reply to this email."),
+    emailParagraphHtml("Sincerely,<br/>Reiner"),
     extraNote,
-    billingEmailFooterHtml(),
   ].join("");
 
   const htmlBody = wrapEmailMainHtml(innerHtml);

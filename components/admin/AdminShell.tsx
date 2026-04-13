@@ -11,6 +11,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <Link href="/admin/high-volume">Submission Controls</Link>
         <Link href="/admin/billing">Billing</Link>
         <Link href="/admin/filing-complete-email">Filing email</Link>
+        <Link href="/admin/client-emailer">Client emailer</Link>
         <form action="/api/admin/logout" method="post">
           <button className="linkBtn" type="submit">Logout</button>
         </form>
