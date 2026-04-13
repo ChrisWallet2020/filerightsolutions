@@ -1,19 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AdminClientEmailCombobox, type AdminClientEmailOption } from "@/components/admin/AdminClientEmailCombobox";
 
 const ERR_MAP: Record<string, string> = {
   unauthorized: "You are not signed in as admin.",
-  invalid: "Please choose a client, subject, and email content.",
-  user_not_found: "Client not found. Pick a registered client from the list.",
+  invalid: "Please enter a valid recipient email, subject, and email content.",
   send_failed: "SMTP send failed. Check SMTP settings and server logs.",
 };
 
 type PendingState = "preview" | "send" | null;
 
-export function ClientEmailerForm({ clients }: { clients: AdminClientEmailOption[] }) {
+export function ClientEmailerForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -24,15 +22,7 @@ export function ClientEmailerForm({ clients }: { clients: AdminClientEmailOption
   const [err, setErr] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const selected = useMemo(
-    () =>
-      clients.find(
-        (c) => email.trim() && c.email.toLowerCase() === email.trim().toLowerCase()
-      ) ?? null,
-    [clients, email]
-  );
-
-  const canSubmit = Boolean(selected && subject.trim() && body.trim());
+  const canSubmit = Boolean(email.trim() && subject.trim() && body.trim());
 
   async function request(kind: "preview" | "send") {
     setErr(null);
@@ -77,13 +67,13 @@ export function ClientEmailerForm({ clients }: { clients: AdminClientEmailOption
   return (
     <div style={{ marginTop: 18, display: "grid", gap: 16, maxWidth: 900 }}>
       <label style={{ display: "grid", gap: 6, color: "#0f172a" }}>
-        <strong>Client Name</strong>
-        <AdminClientEmailCombobox
-          options={clients}
+        <strong>Client Email</strong>
+        <input
+          type="email"
           value={email}
-          onChange={setEmail}
-          variant="name"
-          placeholder="Search by name…"
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="client@example.com"
+          style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 12 }}
         />
       </label>
 
