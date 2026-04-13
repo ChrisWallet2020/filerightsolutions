@@ -81,7 +81,7 @@ export function buildBillingQuoteEmail(opts: {
     "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing.",
     `If you would like to proceed, you may complete your payment at ${payUrl}`,
     "Once payment is confirmed, we will handle the correction and filing process accordingly.",
-    "If your taxes are negative, you may claim a refund from BIR otherwise it will be carried over as a tax credit for the next taxable year.",
+    "If your taxes are negative it will be carried over as a tax credit for the next taxable year.",
     "If anything in the evaluation needs clarification, feel free to reply to this email.",
     "Sincerely,",
     "Reiner",
@@ -117,7 +117,7 @@ export function buildBillingQuoteEmail(opts: {
       "Once payment is confirmed, we will handle the correction and filing process accordingly."
     ),
     emailParagraphHtml(
-      "If your taxes are negative, you may claim a refund from BIR otherwise it will be carried over as a tax credit for the next taxable year."
+      "If your taxes are negative it will be carried over as a tax credit for the next taxable year."
     ),
     emailParagraphHtml("If anything in the evaluation needs clarification, feel free to reply to this email."),
     emailParagraphHtml("Sincerely,<br/>Reiner"),
