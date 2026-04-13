@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { LoginPostForm } from "@/components/auth/LoginPostForm";
 import { config } from "@/lib/config";
 import { safePostLoginPath } from "@/lib/postLoginRedirect";
@@ -5,9 +6,13 @@ import { safePostLoginPath } from "@/lib/postLoginRedirect";
 /** Must be dynamic or `next` is often missing (stale shell / caching). */
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Sign in",
+/** Absolute title so search results lead with the brand (not “Sign In - …”). */
+const pageTitle = `${config.brandName} — Sign in`;
+
+export const metadata: Metadata = {
+  title: { absolute: pageTitle },
   description: `Sign in to your ${config.brandName} account for evaluations, billing, and tax filing assistance.`,
+  openGraph: { title: pageTitle },
 };
 
 function firstString(v: string | string[] | undefined): string | undefined {
