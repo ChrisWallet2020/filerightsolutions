@@ -449,6 +449,7 @@ a.btn:hover { filter: brightness(0.95); }
 }
 .adminMain .section {
   max-width: 1120px;
+  margin: 0 auto;
   padding: 0;
 }
 .adminMain h1 {

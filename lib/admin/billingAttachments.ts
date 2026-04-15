@@ -1,6 +1,11 @@
 import type { MailAttachment } from "@/lib/email/mailer";
 
-export const BILLING_ATTACHMENT_FIELD_NAMES = ["billingAttachment1", "billingAttachment2", "billingAttachment3"] as const;
+export const BILLING_ATTACHMENT_FIELD_NAMES = [
+  "billingAttachment1",
+  "billingAttachment2",
+  "billingAttachment3",
+  "billingAttachment4",
+] as const;
 
 export const MAX_BILLING_IMAGE_BYTES = 10 * 1024 * 1024;
 

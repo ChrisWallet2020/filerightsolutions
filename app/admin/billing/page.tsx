@@ -48,8 +48,8 @@ export default async function AdminBillingPage({
       <h1>Billing &amp; quotes</h1>
       <p className="muted adminPageIntro">
         Search by client <b>full name</b> (they must have already <b>submitted</b> their 1701A evaluation). The billing
-        email is sent to their sign-in email. Enter the service fee.{" "}
-        <b>Send billing email</b> creates the quote and sends the payment email. You can attach up to three images if
+        email is sent to their sign-in email. Service fee is auto-computed from the submitted form.{" "}
+        <b>Send billing email</b> creates the quote and sends the payment email. You can attach up to four images if
         needed.
       </p>
 

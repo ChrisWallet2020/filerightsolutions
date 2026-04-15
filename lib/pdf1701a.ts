@@ -93,6 +93,49 @@ function part4Cell(p: AnyObj, no: number, side: "A" | "B"): string {
   return "";
 }
 
+function part4Num(p: AnyObj, no: number, side: "A" | "B"): number {
+  const raw = part4Cell(p, no, side);
+  if (!raw) return 0;
+  const cleaned = raw.replace(/,/g, "").replace(/PHP\s*/gi, "").trim();
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function part4Money(n: number): string {
+  const safe = Number.isFinite(n) ? n : 0;
+  return safe.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function computedPart4Cell(p: AnyObj, no: number, side: "A" | "B"): string {
+  // Business rule override for downloadable PDF (IV.A rows derived from IV.B inputs).
+  const from47 = part4Num(p, 47, side);
+  const from48 = part4Num(p, 48, side);
+  const from49 = part4Num(p, 49, side);
+  const from50 = part4Num(p, 50, side);
+  const from51 = part4Num(p, 51, side);
+  const osd40 = from49 * 0.4;
+  const net60 = from49 * 0.6;
+  const totalOther = from50 + from51;
+  const totalTaxable = totalOther + net60;
+
+  if (no === 36) return part4Money(from47);
+  if (no === 37) return part4Money(from48);
+  if (no === 38) return part4Money(from49);
+  if (no === 39) return part4Money(osd40);
+  if (no === 40) return part4Money(net60);
+  if (no === 41) return part4Money(from50);
+  if (no === 42) return part4Money(from51);
+  if (no === 44) return part4Money(totalOther);
+  if (no === 45) return part4Money(totalTaxable);
+  if (no === 46) {
+    if (totalTaxable < 250_000) return "0.00";
+    // If >= 250,000, preserve submitted tax due value (no bracket recomputation here).
+    const existing = part4Cell(p, 46, side);
+    return existing || "0.00";
+  }
+  return part4Cell(p, no, side);
+}
+
 function hasPart4Object(p: AnyObj): boolean {
   return Boolean(p.part4 && typeof p.part4 === "object" && !Array.isArray(p.part4));
 }
@@ -120,8 +163,8 @@ function drawPart4Sections(
     y -= 10;
     for (const r of sec.rows) {
       if (y < 58) break;
-      const a = part4Cell(payload, r.no, "A");
-      const b = part4Cell(payload, r.no, "B");
+      const a = computedPart4Cell(payload, r.no, "A");
+      const b = computedPart4Cell(payload, r.no, "B");
       const rawLabel = str(r.label);
       const lab = rawLabel.length > 54 ? rawLabel.slice(0, 52) + "…" : rawLabel;
       page.drawText(String(r.no), { x: noX, y, size: 7, font: fontBold });

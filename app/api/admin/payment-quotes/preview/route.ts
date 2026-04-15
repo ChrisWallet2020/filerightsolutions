@@ -10,10 +10,10 @@ import {
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
+import { getAutoBillingBaseAmountForUser } from "@/lib/admin/billingAutoFee";
 
 const Schema = z.object({
   userEmail: z.string().email(),
-  baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
   clientNote: z.string().max(2000).optional().or(z.literal("")),
 });
 
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       : redirectBillingError(req, "invalid_form");
   }
 
-  const { userEmail, baseAmountPhp, clientNote } = parsed.data;
+  const { userEmail, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
   const eligible = await findUserWith1701aSubmissionByEmail(email);
   if (!eligible) {
@@ -84,6 +84,7 @@ export async function POST(req: Request) {
       : redirectBillingError(req, code);
   }
   const user = eligible;
+  const baseAmountPhp = await getAutoBillingBaseAmountForUser(user.id);
   const confirmedCredits = await prisma.referralEvent.count({
     where: { referrerId: user.id, evaluationCompleted: true },
   });

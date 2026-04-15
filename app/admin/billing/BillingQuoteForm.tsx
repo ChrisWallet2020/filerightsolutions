@@ -148,19 +148,16 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
             />
           </label>
           <label className="adminLabel">
-            <strong>Service Fee (PhP)</strong>
-            <input name="baseAmountPhp" type="number" min={1} step={1} required placeholder="3500" />
-          </label>
-          <label className="adminLabel">
             Note to client (optional, shown on payment page)
             <textarea
               name="clientNote"
               rows={3}
+              style={{ minHeight: 100 }}
               placeholder="e.g. 1701A amendment — as discussed"
             />
           </label>
           <div className="adminFieldset">
-            <p className="adminFieldsetTitle">Billing images (optional, up to 3)</p>
+            <p className="adminFieldsetTitle">Billing images (optional, up to 4)</p>
             <label className="muted adminLabel">
               Image 1
               <input name="billingAttachment1" type="file" accept="image/*" />
@@ -172,6 +169,10 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
             <label className="muted adminLabel">
               Image 3
               <input name="billingAttachment3" type="file" accept="image/*" />
+            </label>
+            <label className="muted adminLabel">
+              Image 4
+              <input name="billingAttachment4" type="file" accept="image/*" />
             </label>
           </div>
           <div className="adminActions">

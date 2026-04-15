@@ -8,6 +8,20 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+function formatPhilippineDateTime(v: Date | string): string {
+  const d = v instanceof Date ? v : new Date(v);
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
 export default async function AdminEvaluationsPage({
   searchParams,
 }: {
@@ -26,6 +40,8 @@ export default async function AdminEvaluationsPage({
       evaluation: { include: { user: true } },
     },
   });
+  const downloadedCount = subs.filter((s) => isAdminEvalPdfDownloadCurrent(s) && s.adminPdfDownloadedAt).length;
+  const notDownloadedCount = Math.max(0, subs.length - downloadedCount);
 
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 20px" }}>
@@ -37,6 +53,47 @@ export default async function AdminEvaluationsPage({
       </p>
 
       <SyncReferralCreditsForm />
+
+      <section
+        className="adminCard"
+        style={{
+          marginTop: 14,
+          padding: 14,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 10,
+          maxWidth: 520,
+        }}
+      >
+        <div
+          style={{
+            border: "1px solid #bbf7d0",
+            borderRadius: 12,
+            background: "#f0fdf4",
+            padding: "10px 12px",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#166534", fontWeight: 700, letterSpacing: "0.01em" }}>Downloaded</div>
+          <div style={{ marginTop: 2, fontSize: 22, lineHeight: 1.1, color: "#14532d", fontWeight: 800 }}>
+            {downloadedCount}
+          </div>
+        </div>
+        <div
+          style={{
+            border: "1px solid #cbd5e1",
+            borderRadius: 12,
+            background: "#f8fafc",
+            padding: "10px 12px",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#475569", fontWeight: 700, letterSpacing: "0.01em" }}>
+            Not yet downloaded
+          </div>
+          <div style={{ marginTop: 2, fontSize: 22, lineHeight: 1.1, color: "#0f172a", fontWeight: 800 }}>
+            {notDownloadedCount}
+          </div>
+        </div>
+      </section>
 
       {syncCount !== null ? (
         <div
@@ -82,7 +139,7 @@ export default async function AdminEvaluationsPage({
                   ) : null}
                   {isAdminEvalPdfDownloadCurrent(s) && s.adminPdfDownloadedAt ? (
                     <span
-                      title={`PDF fetched ${new Date(s.adminPdfDownloadedAt).toLocaleString()}`}
+                      title={`PDF fetched ${formatPhilippineDateTime(s.adminPdfDownloadedAt)} (PH time)`}
                       style={{
                         marginLeft: 6,
                         fontSize: 12,
@@ -99,7 +156,7 @@ export default async function AdminEvaluationsPage({
                   ) : null}
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
-                  Submitted: {new Date(s.createdAt).toLocaleString()}
+                  Submitted: {formatPhilippineDateTime(s.createdAt)} (PH time)
                   {s.evaluation.submit1701aCount > 1 ? (
                     <span style={{ marginLeft: 8, color: "#b45309", fontWeight: 600 }}>
                       · Portal submit #{s.evaluation.submit1701aCount}

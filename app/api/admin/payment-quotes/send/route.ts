@@ -11,6 +11,7 @@ import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { isMailEnvConfigured, sendMail } from "@/lib/email/mailer";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
+import { getAutoBillingBaseAmountForUser } from "@/lib/admin/billingAutoFee";
 import { smtpSendContext } from "@/lib/smtpSendContext";
 
 /** Mail transport errors often put provider reply text on `response`, not only `message`. */
@@ -63,7 +64,6 @@ function buildProviderSafeFallbackEmail(opts: {
 
 const Schema = z.object({
   userEmail: z.string().email(),
-  baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
   clientNote: z.string().max(2000).optional().or(z.literal("")),
 });
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { userEmail, baseAmountPhp, clientNote } = parsed.data;
+  const { userEmail, clientNote } = parsed.data;
   const email = userEmail.trim().toLowerCase();
 
   const user = await findUserWith1701aSubmissionByEmail(email);
@@ -105,6 +105,8 @@ export async function POST(req: Request) {
     redir.searchParams.set("quoteError", err);
     return NextResponse.redirect(redir, 303);
   }
+
+  const baseAmountPhp = await getAutoBillingBaseAmountForUser(user.id);
 
   const { token } = await createPaymentQuoteAdmin({
     userId: user.id,
