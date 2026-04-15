@@ -28,6 +28,39 @@ function mailFailureDigest(err: unknown): string {
   return parts.join(" ");
 }
 
+function buildProviderSafeFallbackEmail(opts: {
+  clientName: string;
+  payUrl: string;
+  finalAmountPhp: number;
+  supportEmail: string;
+}) {
+  const amount = `PHP ${opts.finalAmountPhp.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+  const subject = "Payment link for your tax filing service";
+  const textBody = [
+    `Hello ${opts.clientName},`,
+    "",
+    "Your billing quote is ready.",
+    `Amount due: ${amount}`,
+    `Payment link: ${opts.payUrl}`,
+    "",
+    `If you need help, reply to this email or contact ${opts.supportEmail}.`,
+    "",
+    "FileRight Solutions",
+  ].join("\n");
+  const htmlBody = [
+    `<p>Hello ${opts.clientName.replace(/</g, "&lt;").replace(/>/g, "&gt;")},</p>`,
+    "<p>Your billing quote is ready.</p>",
+    `<p><strong>Amount due:</strong> ${amount}</p>`,
+    `<p><a href="${opts.payUrl}">Open payment link</a><br/><span style="word-break:break-all">${opts.payUrl}</span></p>`,
+    `<p>If you need help, reply to this email or contact <a href="mailto:${opts.supportEmail}">${opts.supportEmail}</a>.</p>`,
+    "<p>FileRight Solutions</p>",
+  ].join("");
+  return { subject, textBody, htmlBody };
+}
+
 const Schema = z.object({
   userEmail: z.string().email(),
   baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
@@ -106,6 +139,7 @@ export async function POST(req: Request) {
   let emailError = false;
   let emailDevLog = false;
   let emailFailureReason = "";
+  let usedFallbackSend = false;
   try {
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
       replyTo: mailCtx.supportEmail,
@@ -132,6 +166,36 @@ export async function POST(req: Request) {
     } else if (/552|checkspam|spam or virus|virus content|rejected for spam/i.test(msg)) {
       // GoDaddy / secureserver outbound content filter (often images or wording).
       emailFailureReason = "provider_content_filter";
+      // Last-resort retry: plain, no-attachment email is less likely to be filtered.
+      try {
+        const fallback = buildProviderSafeFallbackEmail({
+          clientName: user.fullName.trim() || "Client",
+          payUrl,
+          finalAmountPhp: totals.finalAmountPhp,
+          supportEmail: mailCtx.supportEmail,
+        });
+        const retry = await sendMail(user.email, fallback.subject, fallback.textBody, fallback.htmlBody, {
+          replyTo: mailCtx.supportEmail,
+          ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
+          ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
+        });
+        if (retry.messageId === "DEV_LOG_ONLY") {
+          emailDevLog = true;
+        } else {
+          emailSent = true;
+          emailError = false;
+          emailFailureReason = "";
+          usedFallbackSend = true;
+          console.warn("BILLING_QUOTE_EMAIL_RETRY_MINIMAL_OK", {
+            to: user.email,
+            messageId: retry.messageId,
+            bcc: Boolean(mailCtx.smtpBcc),
+          });
+        }
+      } catch (retryErr) {
+        const retryMsg = mailFailureDigest(retryErr);
+        console.error("BILLING_QUOTE_EMAIL_RETRY_MINIMAL_FAILED:", retryMsg);
+      }
     } else {
       emailFailureReason = "mail_send_failed";
     }
@@ -142,6 +206,9 @@ export async function POST(req: Request) {
   redir.searchParams.set("emailed", emailSent ? "1" : "0");
   if (emailDevLog) {
     redir.searchParams.set("emailDev", "1");
+  }
+  if (usedFallbackSend) {
+    redir.searchParams.set("emailFallback", "1");
   }
   if (emailError) {
     redir.searchParams.set("emailError", "1");

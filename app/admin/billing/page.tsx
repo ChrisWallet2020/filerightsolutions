@@ -19,6 +19,7 @@ export default async function AdminBillingPage({
   const emailed = searchParams.emailed === "1";
   const emailFailed = searchParams.emailError === "1";
   const emailDev = searchParams.emailDev === "1";
+  const emailFallback = searchParams.emailFallback === "1";
   const emailReason =
     typeof searchParams.emailReason === "string" ? searchParams.emailReason.trim() : "";
 
@@ -113,6 +114,11 @@ export default async function AdminBillingPage({
           <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.5, color: "#166534" }}>
             Delivery is usually immediate. If the client doesn&apos;t see it, suggest spam or promotions.
           </p>
+          {emailFallback ? (
+            <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.45, color: "#166534" }}>
+              Sent using a simplified fallback format (no attachment-heavy template) after provider content filtering.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

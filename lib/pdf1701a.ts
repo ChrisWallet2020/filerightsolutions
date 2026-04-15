@@ -384,7 +384,9 @@ function drawSectionBand(page: PDFPage, fontBold: PDFFont, label: string, yStart
     borderWidth: 0.8,
   });
   page.drawText(label, { x: M + 8, y: yStart - 10, size: 9, font: fontBold });
-  return yStart - h - 2;
+  // Keep a slightly larger gap under band text to avoid visual collision
+  // with the first content row/paragraph that follows.
+  return yStart - h - 8;
 }
 
 function drawTopQuestionRow(page: PDFPage, font: PDFFont, fontBold: PDFFont, payload: AnyObj, yStart: number): number {
@@ -568,7 +570,7 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
       page.drawText(lines[li], { x: cellX, y: cellY - li * atcLineGap, size: 7.7, font });
     }
   }
-  y -= 40;
+  y -= 36;
 
   drawLabeledInput(page, font, fontBold, {
     x: left,
@@ -669,7 +671,7 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
     ],
     64
   );
-  y -= 36;
+  y -= 32;
 
   page.drawText("19 Tax Rate", { x: left, y: y + 10, size: 8.2, font: fontBold });
   const rateLabel = taxRateLabel(payload.taxRateMethod);
