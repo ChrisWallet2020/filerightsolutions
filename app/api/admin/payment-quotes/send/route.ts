@@ -13,6 +13,21 @@ import { isSmtpEnvConfigured, sendMail } from "@/lib/email/mailer";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 import { smtpSendContext } from "@/lib/smtpSendContext";
 
+/** Nodemailer often puts SMTP reply text on `response`, not only `message`. */
+function smtpFailureDigest(err: unknown): string {
+  const parts: string[] = [];
+  if (err instanceof Error) {
+    parts.push(err.message);
+    const o = err as unknown as Record<string, unknown>;
+    if (typeof o.response === "string") parts.push(o.response);
+    if (o.responseCode != null) parts.push(String(o.responseCode));
+    if (typeof o.command === "string") parts.push(o.command);
+  } else {
+    parts.push(String(err));
+  }
+  return parts.join(" ");
+}
+
 const Schema = z.object({
   userEmail: z.string().email(),
   baseAmountPhp: z.coerce.number().int().positive().max(50_000_000),
@@ -109,12 +124,12 @@ export async function POST(req: Request) {
       });
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = smtpFailureDigest(e);
     console.error("BILLING_QUOTE_EMAIL_FAILED:", msg);
     emailError = true;
     if (!isSmtpEnvConfigured()) {
       emailFailureReason = "missing_smtp_env";
-    } else if (/552|checkspam|spam or virus|virus content/i.test(msg)) {
+    } else if (/552|checkspam|spam or virus|virus content|rejected for spam/i.test(msg)) {
       // GoDaddy / secureserver outbound content filter (often images or wording).
       emailFailureReason = "provider_content_filter";
     } else {
