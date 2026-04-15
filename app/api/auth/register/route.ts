@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { config } from "@/lib/config";
+import { customerHasPaidService, processAgentReferralPipeline } from "@/lib/agentReferralsSync";
 import { sendMail } from "@/lib/email/mailer";
 import {
   BILLING_EMAIL_FOOTER_TEXT,
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
     const password = String(form.get("password") || "");
     const password2 = String(form.get("password2") || "");
     const ref = String(form.get("ref") || "").trim().toUpperCase();
+    const agentRef = String(form.get("agentRef") || "").trim().toUpperCase();
 
     if (!fullName || !email || password.length < 8 || password !== password2) {
       return NextResponse.redirect(new URL("/register?error=invalid", req.url), 303);
@@ -88,6 +90,44 @@ export async function POST(req: Request) {
         ...(referralEventId ? { referralEventId } : {}),
       },
     });
+
+    // Agent program link (`agentRef`): counts toward agent dashboard only. Does not create ReferralEvent (client friend-referral / payable credit uses `ref` + referralCode).
+    if (agentRef) {
+      const agent = await prisma.user.findFirst({
+        where: {
+          agentPortalEnabled: true,
+          agentReferralLinkCode: agentRef,
+        },
+        select: { id: true },
+      });
+
+      if (agent && agent.id !== newUser.id) {
+        const prior = await prisma.agentReferralSubmission.findFirst({
+          where: { agentId: agent.id, matchedUserId: newUser.id },
+          select: { id: true },
+        });
+
+        if (!prior) {
+          const sub = await prisma.agentReferralSubmission.create({
+            data: {
+              agentId: agent.id,
+              nameEntered: fullName,
+              matchedUserId: newUser.id,
+              amountPhp: config.agentReferralPayoutPhp,
+            },
+          });
+
+          if (await customerHasPaidService(newUser.id)) {
+            await prisma.agentReferralSubmission.update({
+              where: { id: sub.id },
+              data: { paidDetectedAt: new Date() },
+            });
+          }
+
+          await processAgentReferralPipeline();
+        }
+      }
+    }
 
     const loginUrl = `${String(config.baseUrl).replace(/\/$/, "")}/login`;
     const subject = "Welcome to FileRight Solutions - Account Created";

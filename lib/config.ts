@@ -50,5 +50,9 @@ export const config = {
   /** Per confirmed referral credit: this % off the quoted fee (stacked; one credit per referred user). */
   referralFeeReductionPercent: Number(process.env.REFERRAL_FEE_REDUCTION_PERCENT || "10"),
   /** Minimum amount to charge after discounts (PHP). */
-  minQuotedPaymentPhp: Number(process.env.MIN_QUOTED_PAYMENT_PHP || "1")
+  minQuotedPaymentPhp: Number(process.env.MIN_QUOTED_PAYMENT_PHP || "1"),
+  /** External agent program: PHP amount per successful paid referral (ledger only). */
+  agentReferralPayoutPhp: Number(process.env.AGENT_REFERRAL_PAYOUT_PHP || "100"),
+  /** Hours after agent submission before an eligible payout can be marked complete (customer must be paid). */
+  agentReferralPayoutDelayHours: Number(process.env.AGENT_REFERRAL_PAYOUT_DELAY_HOURS || "72"),
 };

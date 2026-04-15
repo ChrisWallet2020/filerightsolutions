@@ -8,14 +8,14 @@ export default async function AdminClientEmailerPage() {
   if (!isAdminAuthed()) redirect("/admin/login");
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 20px" }}>
+    <section className="section">
       <h1>Client emailer</h1>
-      <p style={{ color: "#475569", fontSize: 14, marginTop: 8, maxWidth: 760, lineHeight: 1.65 }}>
-        Send custom client emails wrapped in the same format used by our existing system emails. Enter any recipient
-        email address, then preview the final HTML before sending.
+      <p className="muted" style={{ marginTop: 8, maxWidth: 760, lineHeight: 1.65 }}>
+        Send custom client emails using the same layout and footer as billing emails. Enter any recipient email
+        address, preview the HTML, then send.
       </p>
 
       <ClientEmailerForm />
-    </main>
+    </section>
   );
 }

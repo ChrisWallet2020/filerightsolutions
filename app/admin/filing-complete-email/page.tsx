@@ -11,14 +11,14 @@ export default async function AdminFilingCompleteEmailPage() {
   const clients = await getFilingCompleteNotifyClientRows();
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 20px" }}>
+    <section className="section">
       <h1>Filing confirmation email</h1>
-      <p style={{ color: "#475569", fontSize: 14, marginTop: 8, maxWidth: 720, lineHeight: 1.65 }}>
+      <p className="muted" style={{ marginTop: 8, maxWidth: 760, lineHeight: 1.65 }}>
         Send the standard “filing processed” notice to a client who has <b>paid</b> and <b>submitted</b> a 1701A
         evaluation. Preview the HTML version, then send when ready (sign-in email is used for delivery).
       </p>
 
       <FilingCompleteEmailForm clients={clients} />
-    </main>
+    </section>
   );
 }

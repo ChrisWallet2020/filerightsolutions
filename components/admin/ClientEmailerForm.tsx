@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 const ERR_MAP: Record<string, string> = {
   unauthorized: "You are not signed in as admin.",
   invalid: "Please enter a valid recipient email, subject, and email content.",
-  send_failed: "SMTP send failed. Check SMTP settings and server logs.",
+  send_failed:
+    "SMTP send failed. Check Vercel logs and SMTP settings. If the API returned OK, check spam or promotions.",
 };
 
 type PendingState = "preview" | "send" | null;
@@ -21,12 +22,14 @@ export function ClientEmailerForm() {
   const [pending, setPending] = useState<PendingState>(null);
   const [err, setErr] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [devLogOnly, setDevLogOnly] = useState(false);
 
   const canSubmit = Boolean(email.trim() && subject.trim() && body.trim());
 
   async function request(kind: "preview" | "send") {
     setErr(null);
     setSentTo(null);
+    setDevLogOnly(false);
     setPending(kind);
     if (kind === "preview") {
       setPreviewHtml(null);
@@ -36,6 +39,7 @@ export function ClientEmailerForm() {
       const res = await fetch(`/api/admin/client-emailer/${kind}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           email: email.trim(),
           subject: subject.trim(),
@@ -47,6 +51,7 @@ export function ClientEmailerForm() {
         subject?: string;
         html?: string;
         to?: string;
+        devLogOnly?: boolean;
       };
       if (!res.ok) {
         setErr(ERR_MAP[json.error || ""] || `Request failed (${res.status}).`);
@@ -58,6 +63,7 @@ export function ClientEmailerForm() {
         return;
       }
       setSentTo(json.to ?? email.trim());
+      setDevLogOnly(Boolean(json.devLogOnly));
       router.refresh();
     } finally {
       setPending(null);
@@ -65,124 +71,135 @@ export function ClientEmailerForm() {
   }
 
   return (
-    <div style={{ marginTop: 18, display: "grid", gap: 16, maxWidth: 900 }}>
-      <label style={{ display: "grid", gap: 6, color: "#0f172a" }}>
-        <strong>Client Email</strong>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="client@example.com"
-          style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 12 }}
-        />
-      </label>
+    <div className="checkoutGrid" style={{ marginTop: 22, gridTemplateColumns: "1fr", maxWidth: 760 }}>
+      <div className="checkoutBox">
+        <h2>Custom client email</h2>
 
-      <label style={{ display: "grid", gap: 6, color: "#0f172a" }}>
-        <strong>Subject</strong>
-        <input
-          type="text"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          placeholder="Type email subject"
-          maxLength={200}
-          style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 12 }}
-        />
-      </label>
+        <div className="form" style={{ marginTop: 4 }}>
+          <label>
+            <strong>Client email</strong>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="client@example.com"
+              autoComplete="email"
+            />
+          </label>
 
-      <label style={{ display: "grid", gap: 6, color: "#0f172a" }}>
-        <strong>Email Content</strong>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={11}
-          placeholder="Type your custom message here…"
-          style={{
-            width: "100%",
-            padding: "12px 14px",
-            border: "1px solid #e2e8f0",
-            borderRadius: 12,
-            fontFamily: "inherit",
-            lineHeight: 1.6,
-          }}
-        />
-      </label>
+          <label>
+            <strong>Subject</strong>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Email subject"
+              maxLength={200}
+            />
+          </label>
 
-      <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-        The content above is wrapped in the standard FileRight email format and footer used by existing emails.
-      </p>
+          <label>
+            <strong>Email content</strong>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={11}
+              placeholder="Type your message. Blank lines become separate paragraphs."
+            />
+          </label>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-        <button
-          type="button"
-          className="btn btnSecondary"
-          disabled={pending !== null || !canSubmit}
-          onClick={() => void request("preview")}
-        >
-          {pending === "preview" ? "Loading preview…" : "Preview email"}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={pending !== null || !canSubmit}
-          onClick={() => void request("send")}
-        >
-          {pending === "send" ? "Sending…" : "Send email"}
-        </button>
-      </div>
+          <p className="muted" style={{ margin: 0, lineHeight: 1.6 }}>
+            Your text is wrapped in the standard FileRight email layout and legal footer, same as billing emails.
+          </p>
 
-      {err ? (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
-            color: "#991b1b",
-            fontSize: 14,
-          }}
-        >
-          {err}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+            <button
+              type="button"
+              className="btn btnSecondary"
+              disabled={pending !== null || !canSubmit}
+              onClick={() => void request("preview")}
+            >
+              {pending === "preview" ? "Loading preview…" : "Preview email"}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={pending !== null || !canSubmit}
+              onClick={() => void request("send")}
+            >
+              {pending === "send" ? "Sending…" : "Send email"}
+            </button>
+          </div>
         </div>
-      ) : null}
 
-      {sentTo ? (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid #bbf7d0",
-            background: "#f0fdf4",
-            color: "#166534",
-            fontSize: 14,
-          }}
-        >
-          Message sent to <b>{sentTo}</b>.
-        </div>
-      ) : null}
+        {err ? (
+          <div
+            className="notice"
+            style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
+          >
+            <strong>Client emailer</strong>
+            <p style={{ margin: "8px 0 0" }}>{err}</p>
+          </div>
+        ) : null}
 
-      {previewSubject ? (
-        <p style={{ margin: 0, fontSize: 14, color: "#475569" }}>
-          Subject: <b style={{ color: "#0f172a" }}>{previewSubject}</b>
-        </p>
-      ) : null}
+        {devLogOnly ? (
+          <div
+            className="notice"
+            style={{ marginTop: 14, borderColor: "#fde68a", background: "#fffbeb", color: "#92400e" }}
+          >
+            <strong>Development mode</strong>
+            <p style={{ margin: "8px 0 0" }}>
+              SMTP is not configured on this environment, so the message was only logged on the server and was not
+              delivered.
+            </p>
+          </div>
+        ) : null}
 
-      {previewHtml ? (
-        <div style={{ marginTop: 4 }}>
-          <div style={{ fontWeight: 800, marginBottom: 8, color: "#0f172a" }}>Preview</div>
-          <iframe
-            title="Custom client email preview"
-            sandbox=""
-            srcDoc={previewHtml}
+        {sentTo && !devLogOnly ? (
+          <div
+            className="notice"
             style={{
-              width: "100%",
-              minHeight: 480,
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              background: "#fff",
+              marginTop: 14,
+              borderColor: "#86efac",
+              background: "#f0fdf4",
+              color: "#14532d",
             }}
-          />
-        </div>
-      ) : null}
+          >
+            <strong>Message sent</strong>
+            <p style={{ margin: "8px 0 0" }}>
+              Queued for <b>{sentTo}</b>. Delivery is usually immediate; ask the recipient to check spam or promotions if
+              it does not arrive.
+            </p>
+          </div>
+        ) : null}
+
+        {previewSubject ? (
+          <p className="muted" style={{ margin: "16px 0 0" }}>
+            Subject: <strong style={{ color: "var(--fg)" }}>{previewSubject}</strong>
+          </p>
+        ) : null}
+
+        {previewHtml ? (
+          <div style={{ marginTop: 12 }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 17, color: "var(--fg)" }}>Preview</h3>
+            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>
+              Nothing was sent. Scroll inside the frame to see the full message.
+            </p>
+            <iframe
+              title="Custom client email preview"
+              sandbox=""
+              srcDoc={previewHtml}
+              style={{
+                width: "100%",
+                minHeight: 720,
+                border: "1px solid var(--line)",
+                borderRadius: 12,
+                background: "#fff",
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

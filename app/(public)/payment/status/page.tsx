@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { MetaPurchaseConversion } from "@/components/analytics/MetaPurchaseConversion";
 import { getAuthedUserId } from "@/lib/auth";
+import { ORDER_STATUS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -13,21 +15,43 @@ export default async function PaymentStatusPage({
   const state = String(searchParams.state || "PENDING");
 
   let quotePaymentHref: string | null = null;
+  let metaOrder: { orderId: string; amountPhp: number; status: string } | null = null;
   if (orderId.trim()) {
     const userId = getAuthedUserId();
     const order = await prisma.order.findUnique({
       where: { orderId: orderId.trim() },
       select: {
+        orderId: true,
+        amountPhp: true,
+        status: true,
         sourcedFromQuote: { select: { token: true, userId: true } },
       },
     });
+    if (order) {
+      metaOrder = {
+        orderId: order.orderId,
+        amountPhp: order.amountPhp,
+        status: order.status,
+      };
+    }
     if (userId && order?.sourcedFromQuote?.userId === userId) {
       quotePaymentHref = `/account/payment?q=${encodeURIComponent(order.sourcedFromQuote.token)}`;
     }
   }
 
+  const isPaid = metaOrder?.status === ORDER_STATUS.PAID;
+  const pollUntilPaid = Boolean(metaOrder && !isPaid);
+
   return (
     <section className="section">
+      {metaOrder ? (
+        <MetaPurchaseConversion
+          orderId={metaOrder.orderId}
+          amountPhp={metaOrder.amountPhp}
+          isPaid={isPaid}
+          pollUntilPaid={pollUntilPaid}
+        />
+      ) : null}
       <h1>Payment Status</h1>
       <p className="muted">
         Order ID: <strong>{orderId || "—"}</strong>

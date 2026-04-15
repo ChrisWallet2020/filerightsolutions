@@ -133,7 +133,16 @@ model User {
   email        String   @unique
   phone        String?
   passwordHash String
-  role         String   @default("CUSTOMER") // CUSTOMER | ADMIN
+  role         String   @default("CUSTOMER") // CUSTOMER | ADMIN | AGENT
+  /// When true, this user may use /agent/login and /agent-dashboard (same email as customer/admin).
+  agentPortalEnabled Boolean @default(false)
+  /// Public token for /register?agentRef=… (agent program counts only). Never use `referralCode` here — that drives client ReferralEvent / payable credit.
+  agentReferralLinkCode String? @unique
+  /// For manual GCash payouts (agents); normalized digits e.g. 09XXXXXXXXX.
+  agentPayoutGcashNumber       String?
+  /// Registered name on GCash (for manual payout verification).
+  agentPayoutGcashAccountName String?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -146,6 +155,40 @@ model User {
   passwordResetTokens        PasswordResetToken[]
   paymentQuotes              PaymentQuote[]
   filingCompleteNotifySends  FilingCompleteNotifySend[]
+
+  agentReferralSubmissions AgentReferralSubmission[] @relation("AgentReferralByAgent")
+  agentReferralMatchedIn   AgentReferralSubmission[] @relation("AgentReferralMatchedUser")
+}
+
+/// External agent typed a referred client name; matched to a customer after name rules; payout after paid + delay.
+model AgentReferralSubmission {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agentId String
+  agent   User   @relation("AgentReferralByAgent", fields: [agentId], references: [id], onDelete: Cascade)
+
+  /// Raw name as entered (may omit middle name vs account full name).
+  nameEntered String @db.Text
+
+  matchedUserId String?
+  matchedUser   User?   @relation("AgentReferralMatchedUser", fields: [matchedUserId], references: [id], onDelete: SetNull)
+
+  /// When we first saw a paid service order for the matched customer.
+  paidDetectedAt DateTime?
+
+  /// Automatic payout marker (72h+ after submission, customer paid). No bank integration—ledger only.
+  payoutCompletedAt DateTime?
+
+  amountPhp Int @default(100)
+
+  /// If set, this row never receives a payout (e.g. duplicate referral for same client).
+  payoutBlockedReason String?
+
+  @@index([agentId, createdAt])
+  @@index([matchedUserId])
+  @@index([payoutCompletedAt])
 }
 
 /// Admin-sent “filing processed” notification; used for “last sent” on filing email UI.

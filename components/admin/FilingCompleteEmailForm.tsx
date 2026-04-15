@@ -37,6 +37,7 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
       const res = await fetch("/api/admin/filing-complete-email/preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ email: email.trim() }),
       });
       const j = await res.json().catch(() => ({}));
@@ -64,6 +65,7 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
       const res = await fetch("/api/admin/filing-complete-email/send", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ email: email.trim() }),
       });
       const j = await res.json().catch(() => ({}));
@@ -86,102 +88,107 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
   }
 
   return (
-    <div style={{ marginTop: 18, display: "grid", gap: 16, maxWidth: 900 }}>
-      <label style={{ display: "grid", gap: 6, color: "#0f172a" }}>
-        <strong>Client Name</strong>
-        <AdminClientEmailCombobox
-          options={options}
-          value={email}
-          onChange={setEmail}
-          variant="name"
-          placeholder="Search by name…"
-        />
-      </label>
+    <div className="checkoutGrid" style={{ marginTop: 22, gridTemplateColumns: "1fr", maxWidth: 760 }}>
+      <div className="checkoutBox">
+        <h2>Filing confirmation email</h2>
 
-      {lastSentAt ? (
-        <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.55 }}>
-          Last sent filing email:{" "}
-          <strong style={{ color: "#0f172a" }}>{new Date(lastSentAt).toLocaleString()}</strong>
-        </p>
-      ) : null}
+        <div className="form" style={{ marginTop: 4 }}>
+          <label>
+            <strong>Client name</strong>
+            <AdminClientEmailCombobox
+              options={options}
+              value={email}
+              onChange={setEmail}
+              variant="name"
+              placeholder="Search by name…"
+            />
+          </label>
 
-      <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-        Only clients who have <b>paid</b> and <b>submitted</b> a 1701A evaluation appear here. The message is sent to
-        their sign-in email.
-      </p>
+          {lastSentAt ? (
+            <p className="muted" style={{ margin: 0, lineHeight: 1.55 }}>
+              Last sent filing email: <strong style={{ color: "var(--fg)" }}>{new Date(lastSentAt).toLocaleString()}</strong>
+            </p>
+          ) : null}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-        <button
-          type="button"
-          className="btn btnSecondary"
-          disabled={pending !== null || !email.trim()}
-          onClick={() => void preview()}
-        >
-          {pending === "preview" ? "Loading preview…" : "Preview email"}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={pending !== null || !email.trim()}
-          onClick={() => void send()}
-        >
-          {pending === "send" ? "Sending…" : "Send email"}
-        </button>
-      </div>
+          <p className="muted" style={{ margin: 0, lineHeight: 1.6 }}>
+            Only clients who have <b>paid</b> and <b>submitted</b> a 1701A evaluation appear here. The message is sent to
+            their sign-in email.
+          </p>
 
-      {err ? (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
-            color: "#991b1b",
-            fontSize: 14,
-          }}
-        >
-          {err}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+            <button
+              type="button"
+              className="btn btnSecondary"
+              disabled={pending !== null || !email.trim()}
+              onClick={() => void preview()}
+            >
+              {pending === "preview" ? "Loading preview…" : "Preview email"}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={pending !== null || !email.trim()}
+              onClick={() => void send()}
+            >
+              {pending === "send" ? "Sending…" : "Send email"}
+            </button>
+          </div>
         </div>
-      ) : null}
 
-      {sent ? (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid #bbf7d0",
-            background: "#f0fdf4",
-            color: "#166534",
-            fontSize: 14,
-          }}
-        >
-          Message sent to <b>{email.trim()}</b>.
-        </div>
-      ) : null}
+        {err ? (
+          <div
+            className="notice"
+            style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
+          >
+            <strong>Filing email</strong>
+            <p style={{ margin: "8px 0 0" }}>{err}</p>
+          </div>
+        ) : null}
 
-      {previewSubject ? (
-        <p style={{ margin: 0, fontSize: 14, color: "#475569" }}>
-          Subject: <b style={{ color: "#0f172a" }}>{previewSubject}</b>
-        </p>
-      ) : null}
-
-      {previewHtml ? (
-        <div style={{ marginTop: 4 }}>
-          <div style={{ fontWeight: 800, marginBottom: 8, color: "#0f172a" }}>Preview</div>
-          <iframe
-            title="Email preview"
-            sandbox=""
-            srcDoc={previewHtml}
+        {sent ? (
+          <div
+            className="notice"
             style={{
-              width: "100%",
-              minHeight: 420,
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              background: "#fff",
+              marginTop: 14,
+              borderColor: "#86efac",
+              background: "#f0fdf4",
+              color: "#14532d",
             }}
-          />
-        </div>
-      ) : null}
+          >
+            <strong>Message sent</strong>
+            <p style={{ margin: "8px 0 0" }}>
+              Queued for <b>{email.trim()}</b>. If the recipient does not see it, suggest spam or promotions.
+            </p>
+          </div>
+        ) : null}
+
+        {previewSubject ? (
+          <p className="muted" style={{ margin: "16px 0 0" }}>
+            Subject: <strong style={{ color: "var(--fg)" }}>{previewSubject}</strong>
+          </p>
+        ) : null}
+
+        {previewHtml ? (
+          <div style={{ marginTop: 12 }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 17, color: "var(--fg)" }}>Preview</h3>
+            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>
+              Nothing was sent. Scroll inside the frame to see the full message.
+            </p>
+            <iframe
+              title="Email preview"
+              sandbox=""
+              srcDoc={previewHtml}
+              style={{
+                width: "100%",
+                minHeight: 720,
+                border: "1px solid var(--line)",
+                borderRadius: 12,
+                background: "#fff",
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

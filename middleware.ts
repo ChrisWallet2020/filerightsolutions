@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE, parseSignedSession } from "@/lib/session";
+import { ADMIN_SESSION_COOKIE, AGENT_SESSION_COOKIE, parseSignedSession } from "@/lib/session";
 import { SESSION_SECRET } from "@/lib/sessionSecret";
 
 /**
@@ -37,6 +37,14 @@ async function hasValidAdminCookie(req: NextRequest): Promise<boolean> {
   return parsed.signature === expected;
 }
 
+async function hasValidAgentCookie(req: NextRequest): Promise<boolean> {
+  const cookie = req.cookies.get(AGENT_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(cookie);
+  if (!parsed) return false;
+  const expected = await sign(parsed.payload);
+  return parsed.signature === expected;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -48,9 +56,18 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/agent-dashboard") || pathname.startsWith("/agent/account")) {
+    if (!(await hasValidAgentCookie(req))) {
+      const u = new URL("/agent/login", req.url);
+      u.searchParams.set("next", pathname + req.nextUrl.search);
+      return NextResponse.redirect(u);
+    }
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/agent-dashboard", "/agent-dashboard/:path*", "/agent/account", "/agent/account/:path*"],
 };

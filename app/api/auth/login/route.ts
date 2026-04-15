@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath), 303);
 
+    if (user.role === "AGENT") {
+      const u = request.nextUrl.clone();
+      u.pathname = "/agent/login";
+      u.search = "";
+      u.searchParams.set("error", "agent_account");
+      return NextResponse.redirect(u, 303);
+    }
+
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath), 303);
 

@@ -7,6 +7,7 @@ import { buildPaymentReceivedTaxFilingInProgressEmail } from "@/lib/email/paymen
 import { EMAIL_DELAYS } from "@/lib/email/timing";
 import { config } from "@/lib/config";
 import { joinTextParagraphs, textToEmailHtmlParagraphs, wrapEmailMainHtml, emailSignatureText } from "@/lib/email/formatting";
+import { processAgentReferralPipeline } from "@/lib/agentReferralsSync";
 
 function hoursAgo(h: number) {
   return new Date(Date.now() - h * 60 * 60 * 1000);
@@ -129,5 +130,12 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, sent, skipped, checked: pending.length });
+  let agentReferrals = { matched: 0, paidSync: 0, payouts: 0 };
+  try {
+    agentReferrals = await processAgentReferralPipeline();
+  } catch (e) {
+    console.error("AGENT_REFERRAL_CRON_FAILED", e);
+  }
+
+  return NextResponse.json({ ok: true, sent, skipped, checked: pending.length, agentReferrals });
 }

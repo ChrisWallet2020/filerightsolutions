@@ -4,7 +4,11 @@ import { isAdminAuthed } from "@/lib/auth";
 import { buildAdminCustomClientEmail } from "@/lib/email/adminCustomClientEmail";
 
 const Body = z.object({
-  email: z.string().email(),
+  email: z
+    .string()
+    .trim()
+    .transform((s) => s.toLowerCase())
+    .pipe(z.string().email()),
   subject: z.string().trim().min(1).max(200),
   body: z.string().trim().min(1).max(12000),
 });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
 import { findUserForFilingCompleteNotifyByEmail } from "@/lib/admin/findUserForFilingCompleteNotify";
+import { config } from "@/lib/config";
 import { buildFilingCompleteNotifyEmail, firstNameFromFullName } from "@/lib/email/filingCompleteNotifyEmail";
 import { sendMail } from "@/lib/email/mailer";
 
@@ -29,7 +30,13 @@ export async function POST(req: Request) {
   const { subject, textBody, htmlBody } = buildFilingCompleteNotifyEmail(firstName);
 
   try {
-    await sendMail(user.email, subject, textBody, htmlBody);
+    await sendMail(user.email, subject, textBody, htmlBody, {
+      replyTo: config.supportEmail,
+      ...(config.smtp.bcc ? { bcc: config.smtp.bcc } : {}),
+      ...(!config.smtp.from?.trim()
+        ? { fromOverride: `${config.siteName} <${config.supportEmail}>` }
+        : {}),
+    });
   } catch (e) {
     console.error("FILING_COMPLETE_NOTIFY_SEND_FAILED:", e);
     return NextResponse.json({ error: "send_failed" }, { status: 500 });

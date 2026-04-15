@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
 import { NavigationProgress } from "@/components/site/NavigationProgress";
 
 /** Icons: `app/icon.png` and `app/apple-icon.png` are picked up automatically; `public/favicon.ico` serves Google’s usual probe. */
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <MetaPixel />
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>

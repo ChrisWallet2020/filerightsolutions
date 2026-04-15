@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import type { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/db";
 import { config } from "./config";
-import { ADMIN_SESSION_COOKIE, USER_SESSION_COOKIE, parseSignedSession } from "./session";
+import { ADMIN_SESSION_COOKIE, AGENT_SESSION_COOKIE, USER_SESSION_COOKIE, parseSignedSession } from "./session";
 
 /* =========================
    ADMIN SESSION
@@ -82,4 +83,51 @@ export function getAuthedUserId(): string | null {
   if (!parsed) return null;
   if (parsed.signature !== sign(parsed.payload)) return null;
   return parsed.payload;
+}
+
+/* =========================
+   AGENT SESSION (external referrers)
+========================= */
+
+const agentSessionCookieOpts = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 14,
+};
+
+export function setAgentSession(userId: string) {
+  const value = `${userId}.${sign(userId)}`;
+  cookies().set(AGENT_SESSION_COOKIE, value, agentSessionCookieOpts);
+}
+
+export function applyAgentSessionToResponse(response: NextResponse, userId: string) {
+  const value = `${userId}.${sign(userId)}`;
+  response.cookies.set(AGENT_SESSION_COOKIE, value, agentSessionCookieOpts);
+}
+
+export function clearAgentSession() {
+  cookies().set(AGENT_SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+/** Signed-in agent user id, or null if missing/invalid/not an agent account. */
+export async function getAuthedAgentUserId(): Promise<string | null> {
+  const raw = cookies().get(AGENT_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(raw);
+  if (!parsed) return null;
+  if (parsed.signature !== sign(parsed.payload)) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: parsed.payload },
+    select: { id: true, role: true, agentPortalEnabled: true },
+  });
+  if (!user) return null;
+  if (user.role !== "AGENT" && !user.agentPortalEnabled) return null;
+  return user.id;
 }

@@ -4,6 +4,7 @@ import { verifyDragonpayPayload } from "@/lib/dragonpay/verify";
 import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
 import { sendPaymentReceivedTaxFilingInProgressForOrder } from "@/lib/email/sendPaymentReceivedTaxFilingInProgress";
+import { syncAgentReferralsForPaidOrder } from "@/lib/agentReferralsSync";
 
 export async function POST(req: Request) {
   if (!config.dragonpay.secret) {
@@ -64,6 +65,10 @@ export async function POST(req: Request) {
   const uploadLink = `${config.baseUrl}/upload/${order.uploadToken}`;
 
   if (becamePaid) {
+    await syncAgentReferralsForPaidOrder({
+      id: order.id,
+      customerEmail: order.customerEmail,
+    });
     await sendPaymentReceivedTaxFilingInProgressForOrder({
       id: order.id,
       orderId: order.orderId,

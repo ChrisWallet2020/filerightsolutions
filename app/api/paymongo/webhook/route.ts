@@ -4,6 +4,7 @@ import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
 import { verifyPaymongoWebhookSignature } from "@/lib/paymongo/verifyWebhook";
 import { sendPaymentReceivedTaxFilingInProgressForOrder } from "@/lib/email/sendPaymentReceivedTaxFilingInProgress";
+import { syncAgentReferralsForPaidOrder } from "@/lib/agentReferralsSync";
 
 /** Browsers and crawlers often GET this URL; PayMongo delivers events via POST only. */
 export async function GET() {
@@ -79,6 +80,11 @@ export async function POST(req: Request) {
     await prisma.order.update({
       where: { id: order.id },
       data: { status: ORDER_STATUS.PAID, paidAt: new Date() },
+    });
+
+    await syncAgentReferralsForPaidOrder({
+      id: order.id,
+      customerEmail: order.customerEmail,
     });
 
     await sendPaymentReceivedTaxFilingInProgressForOrder({

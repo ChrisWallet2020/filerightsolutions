@@ -2,6 +2,10 @@ import { Suspense } from "react";
 import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
 import { authCard, authLead, authMain, authTitle } from "@/components/auth/authFlowShared";
 
+export const metadata = {
+  robots: { index: false, follow: true },
+};
+
 function ResetPasswordFallback() {
   return (
     <main style={authMain}>

@@ -2,6 +2,10 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { config } from "@/lib/config";
 
+export const metadata = {
+  robots: { index: false, follow: true },
+};
+
 export default function RegisterEmailSentPage({
   searchParams,
 }: {

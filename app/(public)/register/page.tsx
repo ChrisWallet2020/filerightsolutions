@@ -4,15 +4,19 @@ import { config } from "@/lib/config";
 export const metadata = {
   title: "Create account",
   description: `Create a ${config.brandName} account to submit evaluations, referrals, and tax filing requests.`,
+  robots: { index: false, follow: true },
 };
 
 export default function RegisterPage({
   searchParams,
 }: {
-  searchParams?: { error?: string; ref?: string };
+  searchParams?: { error?: string; ref?: string; agentRef?: string };
 }) {
   const error = searchParams?.error;
   const referralFromLink = String(searchParams?.ref || "")
+    .trim()
+    .toUpperCase();
+  const agentRefFromLink = String(searchParams?.agentRef || "")
     .trim()
     .toUpperCase();
 
@@ -45,7 +49,26 @@ export default function RegisterPage({
         </div>
       )}
 
-      <RegisterPostForm defaultRef={referralFromLink} />
+      {agentRefFromLink ? (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #bfdbfe",
+            background: "#eff6ff",
+            color: "#1e3a8a",
+            fontSize: 14,
+            lineHeight: 1.55,
+          }}
+        >
+          You arrived via an <strong>agent program</strong> signup link. This only ties your new account to that agent
+          for their referral stats — it is <strong>not</strong> the same as a friend’s referral code (the optional field
+          below), which is what applies the client referral benefit on the referrer’s side.
+        </div>
+      ) : null}
+
+      <RegisterPostForm defaultRef={referralFromLink} defaultAgentRef={agentRefFromLink} />
 
       <p style={{ marginTop: 14, color: "#475569" }}>
         Already have an account? <a href="/login">Sign in</a>

@@ -23,7 +23,13 @@ const btnPrimary: CSSProperties = {
   cursor: "pointer",
 };
 
-export function RegisterPostForm({ defaultRef }: { defaultRef: string }) {
+export function RegisterPostForm({
+  defaultRef,
+  defaultAgentRef = "",
+}: {
+  defaultRef: string;
+  defaultAgentRef?: string;
+}) {
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
@@ -38,6 +44,7 @@ export function RegisterPostForm({ defaultRef }: { defaultRef: string }) {
 
   return (
     <form method="post" action="/api/auth/register" onSubmit={onSubmit} style={{ marginTop: 18, display: "grid", gap: 12 }}>
+      {defaultAgentRef ? <input type="hidden" name="agentRef" value={defaultAgentRef} /> : null}
       <label style={{ fontSize: 14, color: "#334155" }}>
         Full Name
         <input name="fullName" required style={inputStyle} />
