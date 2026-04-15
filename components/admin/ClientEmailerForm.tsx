@@ -7,7 +7,7 @@ const ERR_MAP: Record<string, string> = {
   unauthorized: "You are not signed in as admin.",
   invalid: "Please enter a valid recipient email, subject, and email content.",
   send_failed:
-    "SMTP send failed. Check Vercel logs and SMTP settings. If the API returned OK, check spam or promotions.",
+    "Email send failed. Check Vercel logs and Graph mail configuration. If the API returned OK, check spam or promotions.",
 };
 
 type PendingState = "preview" | "send" | null;

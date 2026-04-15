@@ -74,7 +74,7 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
           j.error === "not_eligible" || j.error === "not_submitted"
             ? NOT_ELIGIBLE
             : j.error === "send_failed"
-              ? "SMTP send failed. Check server logs and SMTP configuration."
+              ? "Email send failed. Check server logs and Graph mail configuration."
               : "Send failed."
         );
         setSent(false);

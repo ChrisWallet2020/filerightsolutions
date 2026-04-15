@@ -33,7 +33,7 @@ export default function RegisterEmailSentPage({
             }}
           >
             Your account is ready, but we couldn&apos;t send the welcome email (usually{" "}
-            <strong>SMTP is not configured</strong> on the server). Add{" "}
+            <strong>Graph mail is not configured</strong> on the server). Add{" "}
             <code style={{ fontSize: 13 }}>GRAPH_TENANT_ID</code>, <code style={{ fontSize: 13 }}>GRAPH_CLIENT_ID</code>
             , <code style={{ fontSize: 13 }}>GRAPH_CLIENT_SECRET</code>, and{" "}
             <code style={{ fontSize: 13 }}>GRAPH_SENDER_USER</code> in Vercel → Environment Variables, then redeploy.

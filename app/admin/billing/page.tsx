@@ -77,8 +77,8 @@ export default async function AdminBillingPage({
                 Vercel logs
               </a>{" "}
               for <code>BILLING_QUOTE_EMAIL_FAILED</code>. Common causes: wrong Graph app permission/consent, invalid
-              client secret, or <code>SMTP_FROM</code> not allowed for your <code>GRAPH_SENDER_USER</code>. You can send
-              the payment link manually below.
+              client secret, or sender address policy mismatch for <code>GRAPH_SENDER_USER</code>. You can send the
+              payment link manually below.
             </p>
           ) : emailReason === "missing_mail_env" || emailReason === "missing_smtp_env" ? (
             <p className="adminNoticeBody">
