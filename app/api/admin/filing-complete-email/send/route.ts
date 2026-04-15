@@ -5,7 +5,7 @@ import { isAdminAuthed } from "@/lib/auth";
 import { findUserForFilingCompleteNotifyByEmail } from "@/lib/admin/findUserForFilingCompleteNotify";
 import { buildFilingCompleteNotifyEmail, firstNameFromFullName } from "@/lib/email/filingCompleteNotifyEmail";
 import { sendMail } from "@/lib/email/mailer";
-import { getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
+import { defaultFromOverride, getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
 
 const Body = z.object({
   email: z.string().email(),
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     await sendMail(user.email, subject, textBody, htmlBody, {
       replyTo: mailEnv.supportEmail,
       ...(mailEnv.smtpBcc ? { bcc: mailEnv.smtpBcc } : {}),
-      ...(!mailEnv.smtpFrom ? { fromOverride: `${mailEnv.siteName} <${mailEnv.supportEmail}>` } : {}),
+      ...(!mailEnv.smtpFrom ? { fromOverride: defaultFromOverride(mailEnv) } : {}),
     });
   } catch (e) {
     console.error("FILING_COMPLETE_NOTIFY_SEND_FAILED:", e);

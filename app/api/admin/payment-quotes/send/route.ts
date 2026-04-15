@@ -10,7 +10,7 @@ import { createPaymentQuoteAdmin } from "@/lib/admin/paymentQuoteCreate";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { isSmtpEnvConfigured, sendMail } from "@/lib/email/mailer";
-import { getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
+import { defaultFromOverride, getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 
 const Schema = z.object({
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
       replyTo: mailEnv.supportEmail,
       attachments: emailAttachments,
       ...(mailEnv.smtpBcc ? { bcc: mailEnv.smtpBcc } : {}),
-      ...(!mailEnv.smtpFrom ? { fromOverride: `${mailEnv.siteName} <${mailEnv.supportEmail}>` } : {}),
+      ...(!mailEnv.smtpFrom ? { fromOverride: defaultFromOverride(mailEnv) } : {}),
     });
     if (result.messageId === "DEV_LOG_ONLY") {
       emailDevLog = true;
@@ -109,7 +109,8 @@ export async function POST(req: Request) {
       });
     }
   } catch (e) {
-    console.error("BILLING_QUOTE_EMAIL_FAILED:", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("BILLING_QUOTE_EMAIL_FAILED:", msg);
     emailError = true;
   }
 

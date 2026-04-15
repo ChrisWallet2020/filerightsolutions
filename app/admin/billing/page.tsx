@@ -61,7 +61,9 @@ export default async function AdminBillingPage({
           {emailReason === "smtp_send_failed" ? (
             <p style={{ margin: "8px 0 0" }}>
               The quote was still created. SMTP is set, but your provider rejected the send (wrong password, blocked
-              sign-in, or From address not allowed).               Open{" "}
+              sign-in, or <code>SMTP_FROM</code> not allowed for this mailbox). When <code>SMTP_FROM</code> is empty, the
+              app sends as <code>SMTP_USER</code> so Gmail/365/Zoho accept it; set <code>SMTP_FROM</code> only to an
+              address your provider allows for that login. Open{" "}
               <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>
                 Vercel production logs for this project
               </a>{" "}

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { isAdminAuthed } from "@/lib/auth";
 import { buildAdminCustomClientEmail } from "@/lib/email/adminCustomClientEmail";
 import { sendMail } from "@/lib/email/mailer";
-import { getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
+import { defaultFromOverride, getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
 
 const Body = z.object({
   email: z
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     const result = await sendMail(to, parsed.data.subject, mail.textBody, mail.htmlBody, {
       replyTo: mailEnv.supportEmail,
       ...(mailEnv.smtpBcc ? { bcc: mailEnv.smtpBcc } : {}),
-      ...(!mailEnv.smtpFrom ? { fromOverride: `${mailEnv.siteName} <${mailEnv.supportEmail}>` } : {}),
+      ...(!mailEnv.smtpFrom ? { fromOverride: defaultFromOverride(mailEnv) } : {}),
     });
     if (result.messageId === "DEV_LOG_ONLY") {
       return NextResponse.json(

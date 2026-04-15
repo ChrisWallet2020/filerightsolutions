@@ -88,8 +88,9 @@ export async function sendMail(
 
   const s = smtpEnv();
   const d = mailFromDisplayDefaults();
+  const mailbox = s.user || d.supportEmail;
   const from =
-    opts?.fromOverride?.trim() || (s.from ? s.from : `${d.siteName} <${d.supportEmail}>`);
+    opts?.fromOverride?.trim() || (s.from ? s.from : `${d.siteName} <${mailbox}>`);
 
   const attachmentPayload =
     opts?.attachments?.map((a) => ({
@@ -137,8 +138,9 @@ export async function sendMailWithAttachments(
 
   const s = smtpEnv();
   const d = mailFromDisplayDefaults();
+  const mailbox = s.user || d.supportEmail;
   const info = await transporter.sendMail({
-    from: s.from || d.supportEmail,
+    from: s.from || `${d.siteName} <${mailbox}>`,
     to,
     subject,
     text,
