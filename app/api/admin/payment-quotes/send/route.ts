@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
-import { config } from "@/lib/config";
 import {
   collectBillingImagesFromFormData,
   type CollectedBillingImage,
@@ -10,8 +9,9 @@ import {
 import { createPaymentQuoteAdmin } from "@/lib/admin/paymentQuoteCreate";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
-import { sendMail } from "@/lib/email/mailer";
+import { isSmtpEnvConfigured, sendMail } from "@/lib/email/mailer";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
+import { smtpSendContext } from "@/lib/smtpSendContext";
 
 const Schema = z.object({
   userEmail: z.string().email(),
@@ -71,8 +71,8 @@ export async function POST(req: Request) {
   });
 
   const totals = computeQuotedPaymentTotals(baseAmountPhp, confirmedCredits);
-  const baseUrl = String(config.baseUrl).replace(/\/$/, "");
-  const payUrl = `${baseUrl}/account/payment?q=${encodeURIComponent(token)}`;
+  const mailCtx = smtpSendContext();
+  const payUrl = `${mailCtx.siteBaseUrl}/account/payment?q=${encodeURIComponent(token)}`;
 
   const { subject, textBody, htmlBody, attachments } = buildBillingQuoteEmail({
     clientFullName: user.fullName.trim() || "Client",
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     discountPhp: totals.discountPhp,
     finalAmountPhp: totals.finalAmountPhp,
     confirmedCreditCount: confirmedCredits,
-    percentPerCredit: config.referralFeeReductionPercent,
+    percentPerCredit: mailCtx.referralFeeReductionPercent,
     payUrl,
     clientNote: clientNote?.trim() || null,
     expiresAt: null,
@@ -91,14 +91,11 @@ export async function POST(req: Request) {
   let emailError = false;
   let emailDevLog = false;
   try {
-    // Reply-To: support inbox. From: SMTP_FROM when set (provider alignment), else "Site <SUPPORT_EMAIL>".
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
-      replyTo: config.supportEmail,
+      replyTo: mailCtx.supportEmail,
       attachments: emailAttachments,
-      ...(config.smtp.bcc ? { bcc: config.smtp.bcc } : {}),
-      ...(!config.smtp.from?.trim()
-        ? { fromOverride: `${config.siteName} <${config.supportEmail}>` }
-        : {}),
+      ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
+      ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
     });
     if (result.messageId === "DEV_LOG_ONLY") {
       emailDevLog = true;
@@ -107,11 +104,12 @@ export async function POST(req: Request) {
       console.info("BILLING_QUOTE_EMAIL_OK", {
         to: user.email,
         messageId: result.messageId,
-        bcc: Boolean(config.smtp.bcc),
+        bcc: Boolean(mailCtx.smtpBcc),
       });
     }
   } catch (e) {
-    console.error("BILLING_QUOTE_EMAIL_FAILED:", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("BILLING_QUOTE_EMAIL_FAILED:", msg);
     emailError = true;
   }
 
@@ -123,6 +121,10 @@ export async function POST(req: Request) {
   }
   if (emailError) {
     redir.searchParams.set("emailError", "1");
+    redir.searchParams.set(
+      "emailReason",
+      isSmtpEnvConfigured() ? "smtp_send_failed" : "missing_smtp_env"
+    );
   }
   return NextResponse.redirect(redir, 303);
 }

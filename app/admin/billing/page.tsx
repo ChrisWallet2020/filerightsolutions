@@ -19,6 +19,8 @@ export default async function AdminBillingPage({
   const emailed = searchParams.emailed === "1";
   const emailFailed = searchParams.emailError === "1";
   const emailDev = searchParams.emailDev === "1";
+  const emailReason =
+    typeof searchParams.emailReason === "string" ? searchParams.emailReason.trim() : "";
 
   const previewErrorMessage =
     previewError === "user_not_found"
@@ -56,10 +58,27 @@ export default async function AdminBillingPage({
           style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
         >
           <strong>Email failed to send</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            The quote was still created. Configure SMTP (see <code>.env.example</code>) or send the link manually
-            below.
-          </p>
+          {emailReason === "smtp_send_failed" ? (
+            <p style={{ margin: "8px 0 0" }}>
+              The quote was still created. SMTP is configured, but the provider rejected this message. Check{" "}
+              <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>
+                Vercel logs
+              </a>{" "}
+              for <code>BILLING_QUOTE_EMAIL_FAILED</code>. Common causes: wrong app password, or <code>SMTP_FROM</code>{" "}
+              not allowed for your <code>SMTP_USER</code>. You can send the payment link manually below.
+            </p>
+          ) : emailReason === "missing_smtp_env" ? (
+            <p style={{ margin: "8px 0 0" }}>
+              The quote was still created. Set <code>SMTP_HOST</code>, <code>SMTP_USER</code>, and{" "}
+              <code>SMTP_PASS</code> for <strong>Production</strong> in Vercel, redeploy, then retry. See{" "}
+              <code>.env.example</code>. Copy the link below meanwhile.
+            </p>
+          ) : (
+            <p style={{ margin: "8px 0 0" }}>
+              The quote was still created. Configure SMTP (see <code>.env.example</code>) or send the link manually
+              below.
+            </p>
+          )}
         </div>
       ) : null}
 
