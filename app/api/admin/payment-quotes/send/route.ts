@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
-import { config } from "@/lib/config";
 import {
   collectBillingImagesFromFormData,
   type CollectedBillingImage,
@@ -10,7 +9,8 @@ import {
 import { createPaymentQuoteAdmin } from "@/lib/admin/paymentQuoteCreate";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
-import { sendMail } from "@/lib/email/mailer";
+import { isSmtpEnvConfigured, sendMail } from "@/lib/email/mailer";
+import { getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 
 const Schema = z.object({
@@ -71,8 +71,8 @@ export async function POST(req: Request) {
   });
 
   const totals = computeQuotedPaymentTotals(baseAmountPhp, confirmedCredits);
-  const baseUrl = String(config.baseUrl).replace(/\/$/, "");
-  const payUrl = `${baseUrl}/account/payment?q=${encodeURIComponent(token)}`;
+  const mailEnv = getMailRuntimeEnv();
+  const payUrl = `${mailEnv.siteBaseUrl}/account/payment?q=${encodeURIComponent(token)}`;
 
   const { subject, textBody, htmlBody, attachments } = buildBillingQuoteEmail({
     clientFullName: user.fullName.trim() || "Client",
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     discountPhp: totals.discountPhp,
     finalAmountPhp: totals.finalAmountPhp,
     confirmedCreditCount: confirmedCredits,
-    percentPerCredit: config.referralFeeReductionPercent,
+    percentPerCredit: mailEnv.referralFeeReductionPercent,
     payUrl,
     clientNote: clientNote?.trim() || null,
     expiresAt: null,
@@ -91,14 +91,12 @@ export async function POST(req: Request) {
   let emailError = false;
   let emailDevLog = false;
   try {
-    // Reply-To: support inbox. From: SMTP_FROM when set (provider alignment), else "Site <SUPPORT_EMAIL>".
+    // Use process.env-derived values here — not `lib/config` (imported by client Header).
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
-      replyTo: config.supportEmail,
+      replyTo: mailEnv.supportEmail,
       attachments: emailAttachments,
-      ...(config.smtp.bcc ? { bcc: config.smtp.bcc } : {}),
-      ...(!config.smtp.from?.trim()
-        ? { fromOverride: `${config.siteName} <${config.supportEmail}>` }
-        : {}),
+      ...(mailEnv.smtpBcc ? { bcc: mailEnv.smtpBcc } : {}),
+      ...(!mailEnv.smtpFrom ? { fromOverride: `${mailEnv.siteName} <${mailEnv.supportEmail}>` } : {}),
     });
     if (result.messageId === "DEV_LOG_ONLY") {
       emailDevLog = true;
@@ -107,7 +105,7 @@ export async function POST(req: Request) {
       console.info("BILLING_QUOTE_EMAIL_OK", {
         to: user.email,
         messageId: result.messageId,
-        bcc: Boolean(config.smtp.bcc),
+        bcc: Boolean(mailEnv.smtpBcc),
       });
     }
   } catch (e) {
@@ -123,6 +121,10 @@ export async function POST(req: Request) {
   }
   if (emailError) {
     redir.searchParams.set("emailError", "1");
+    redir.searchParams.set(
+      "emailReason",
+      isSmtpEnvConfigured() ? "smtp_send_failed" : "missing_smtp_env"
+    );
   }
   return NextResponse.redirect(redir, 303);
 }

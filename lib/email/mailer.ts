@@ -35,6 +35,11 @@ function hasSmtpConfig(): boolean {
   return Boolean(s.host && s.user && s.pass);
 }
 
+/** Exposed so API routes can tell “missing env” vs “provider rejected send” after a failure. */
+export function isSmtpEnvConfigured(): boolean {
+  return hasSmtpConfig();
+}
+
 function createTransporter() {
   const s = smtpEnv();
   return nodemailer.createTransport({

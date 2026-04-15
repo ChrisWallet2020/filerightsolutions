@@ -3,9 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
 import { findUserForFilingCompleteNotifyByEmail } from "@/lib/admin/findUserForFilingCompleteNotify";
-import { config } from "@/lib/config";
 import { buildFilingCompleteNotifyEmail, firstNameFromFullName } from "@/lib/email/filingCompleteNotifyEmail";
 import { sendMail } from "@/lib/email/mailer";
+import { getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
 
 const Body = z.object({
   email: z.string().email(),
@@ -28,14 +28,13 @@ export async function POST(req: Request) {
 
   const firstName = firstNameFromFullName(user.fullName);
   const { subject, textBody, htmlBody } = buildFilingCompleteNotifyEmail(firstName);
+  const mailEnv = getMailRuntimeEnv();
 
   try {
     await sendMail(user.email, subject, textBody, htmlBody, {
-      replyTo: config.supportEmail,
-      ...(config.smtp.bcc ? { bcc: config.smtp.bcc } : {}),
-      ...(!config.smtp.from?.trim()
-        ? { fromOverride: `${config.siteName} <${config.supportEmail}>` }
-        : {}),
+      replyTo: mailEnv.supportEmail,
+      ...(mailEnv.smtpBcc ? { bcc: mailEnv.smtpBcc } : {}),
+      ...(!mailEnv.smtpFrom ? { fromOverride: `${mailEnv.siteName} <${mailEnv.supportEmail}>` } : {}),
     });
   } catch (e) {
     console.error("FILING_COMPLETE_NOTIFY_SEND_FAILED:", e);

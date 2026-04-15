@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdminAuthed } from "@/lib/auth";
-import { config } from "@/lib/config";
 import { buildAdminCustomClientEmail } from "@/lib/email/adminCustomClientEmail";
 import { sendMail } from "@/lib/email/mailer";
+import { getMailRuntimeEnv } from "@/lib/mailRuntimeEnv";
 
 const Body = z.object({
   email: z
@@ -27,13 +27,12 @@ export async function POST(req: Request) {
 
   const mail = buildAdminCustomClientEmail({ body: parsed.data.body });
   const to = parsed.data.email;
+  const mailEnv = getMailRuntimeEnv();
   try {
     const result = await sendMail(to, parsed.data.subject, mail.textBody, mail.htmlBody, {
-      replyTo: config.supportEmail,
-      ...(config.smtp.bcc ? { bcc: config.smtp.bcc } : {}),
-      ...(!config.smtp.from?.trim()
-        ? { fromOverride: `${config.siteName} <${config.supportEmail}>` }
-        : {}),
+      replyTo: mailEnv.supportEmail,
+      ...(mailEnv.smtpBcc ? { bcc: mailEnv.smtpBcc } : {}),
+      ...(!mailEnv.smtpFrom ? { fromOverride: `${mailEnv.siteName} <${mailEnv.supportEmail}>` } : {}),
     });
     if (result.messageId === "DEV_LOG_ONLY") {
       return NextResponse.json(
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
         { status: 200 }
       );
     }
-    console.info("ADMIN_CUSTOM_CLIENT_EMAIL_OK", { to, messageId: result.messageId, bcc: Boolean(config.smtp.bcc) });
+    console.info("ADMIN_CUSTOM_CLIENT_EMAIL_OK", { to, messageId: result.messageId, bcc: Boolean(mailEnv.smtpBcc) });
   } catch (err) {
     console.error("ADMIN_CUSTOM_CLIENT_EMAIL_SEND_FAILED:", err);
     return NextResponse.json({ error: "send_failed" }, { status: 500 });
