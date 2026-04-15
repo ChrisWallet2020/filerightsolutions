@@ -3,13 +3,18 @@ import { Button } from "@/components/ui/Button";
 import { config } from "@/lib/config";
 import { isAdminAuthed } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { ensureFilingTaskForPaidOrder } from "@/lib/filingTasks";
 import { ORDER_STATUS } from "@/lib/constants";
+
+type OrderDetailRow = Prisma.OrderGetPayload<{
+  include: { pkg: true; uploads: true; payments: true; emailLogs: true; filingTask: true };
+}>;
 
 export default async function OrderDetail({ params }: { params: { orderID: string } }) {
   if (!isAdminAuthed()) redirect("/admin/login");
 
-  let order = null as Awaited<ReturnType<typeof prisma.order.findUnique>> | null;
+  let order: OrderDetailRow | null = null;
   try {
     order = await prisma.order.findUnique({
       where: { orderId: params.orderID },
@@ -20,7 +25,7 @@ export default async function OrderDetail({ params }: { params: { orderID: strin
       where: { orderId: params.orderID },
       include: { pkg: true, uploads: true, payments: true, emailLogs: true },
     });
-    order = fallback ? ({ ...fallback, filingTask: null } as typeof order) : null;
+    order = fallback ? ({ ...fallback, filingTask: null } as OrderDetailRow) : null;
   }
   if (!order) return <section className="section">Order not found.</section>;
 
