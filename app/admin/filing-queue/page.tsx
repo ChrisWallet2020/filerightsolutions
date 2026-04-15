@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { isAdminAuthed } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FILING_TASK_STATUS, ORDER_STATUS } from "@/lib/constants";
@@ -8,6 +9,7 @@ import { ensureFilingTaskForPaidOrder } from "@/lib/filingTasks";
 export const dynamic = "force-dynamic";
 
 type QueueFilter = "all_open" | "ready" | "in_progress" | "on_hold" | "filed" | "overdue";
+type FilingTaskWithOrder = Prisma.FilingTaskGetPayload<{ include: { order: true } }>;
 
 function toDateText(v: Date | null | undefined): string {
   if (!v) return "—";
@@ -31,9 +33,7 @@ export default async function AdminFilingQueuePage({
   const taskError = typeof searchParams?.taskError === "string" ? searchParams.taskError : "";
   const taskOk = searchParams?.taskOk === "1";
 
-  let tasks: Array<
-    Awaited<ReturnType<typeof prisma.filingTask.findMany>> extends Array<infer T> ? T : never
-  > = [];
+  let tasks: FilingTaskWithOrder[] = [];
   try {
     // Backfill tasks for paid orders that predate this feature.
     const paidOrders = await prisma.order.findMany({
