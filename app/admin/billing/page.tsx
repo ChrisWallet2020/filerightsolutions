@@ -58,7 +58,22 @@ export default async function AdminBillingPage({
           style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
         >
           <strong>Email failed to send</strong>
-          {emailReason === "smtp_send_failed" ? (
+          {emailReason === "provider_content_filter" ? (
+            <p style={{ margin: "8px 0 0" }}>
+              The quote was still created. Your mail host (e.g. GoDaddy) accepted the login but{" "}
+              <strong>blocked the message as spam or suspicious content</strong> (SMTP 552 / content filter)—this is
+              not a Vercel bug. Try again <strong>without billing images</strong>, use a shorter client note, or paste
+              the payment link manually. If it persists, open{" "}
+              <a href="https://checkspam.secureserver.net/" style={{ color: "#1d4ed8" }}>
+                https://checkspam.secureserver.net/
+              </a>{" "}
+              with the error from{" "}
+              <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>
+                Vercel logs
+              </a>{" "}
+              (<code>BILLING_QUOTE_EMAIL_FAILED</code>).
+            </p>
+          ) : emailReason === "smtp_send_failed" ? (
             <p style={{ margin: "8px 0 0" }}>
               The quote was still created. SMTP is configured, but the provider rejected this message. Check{" "}
               <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>

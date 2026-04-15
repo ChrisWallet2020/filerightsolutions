@@ -69,7 +69,7 @@ export function buildBillingQuoteEmail(opts: {
   const attachmentText = buildBillingAttachmentText(opts);
   const attachments: MailAttachment[] = [
     {
-      filename: "BIR_Tax_Evaluation_Billing_Summary.txt",
+      filename: "billing-summary.txt",
       content: Buffer.from(attachmentText, "utf-8"),
       contentType: "text/plain; charset=utf-8",
     },

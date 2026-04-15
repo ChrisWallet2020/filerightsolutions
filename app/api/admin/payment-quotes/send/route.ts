@@ -90,6 +90,7 @@ export async function POST(req: Request) {
   let emailSent = false;
   let emailError = false;
   let emailDevLog = false;
+  let emailFailureReason = "";
   try {
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
       replyTo: mailCtx.supportEmail,
@@ -111,6 +112,14 @@ export async function POST(req: Request) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("BILLING_QUOTE_EMAIL_FAILED:", msg);
     emailError = true;
+    if (!isSmtpEnvConfigured()) {
+      emailFailureReason = "missing_smtp_env";
+    } else if (/552|checkspam|spam or virus|virus content/i.test(msg)) {
+      // GoDaddy / secureserver outbound content filter (often images or wording).
+      emailFailureReason = "provider_content_filter";
+    } else {
+      emailFailureReason = "smtp_send_failed";
+    }
   }
 
   const redir = new URL("/admin/billing", req.url);
@@ -121,10 +130,9 @@ export async function POST(req: Request) {
   }
   if (emailError) {
     redir.searchParams.set("emailError", "1");
-    redir.searchParams.set(
-      "emailReason",
-      isSmtpEnvConfigured() ? "smtp_send_failed" : "missing_smtp_env"
-    );
+    if (emailFailureReason) {
+      redir.searchParams.set("emailReason", emailFailureReason);
+    }
   }
   return NextResponse.redirect(redir, 303);
 }
