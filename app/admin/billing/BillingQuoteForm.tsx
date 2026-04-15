@@ -114,25 +114,19 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
   }
 
   return (
-    <div className="checkoutGrid" style={{ marginTop: 22, gridTemplateColumns: "1fr", maxWidth: 760 }}>
-      <div className="checkoutBox">
+    <div className="adminStack" style={{ maxWidth: 760 }}>
+      <div className="adminCard">
         <h2>Create quote</h2>
         {previewBanner ? (
-          <div
-            className="notice"
-            style={{ marginBottom: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-          >
-            <strong>Billing preview</strong>
-            <p style={{ margin: "8px 0 0" }}>{previewBanner}</p>
+          <div className="adminNotice adminNotice--error" style={{ marginBottom: 14 }}>
+            <strong className="adminNoticeTitle">Billing preview</strong>
+            <p className="adminNoticeBody">{previewBanner}</p>
           </div>
         ) : null}
         {sendBanner ? (
-          <div
-            className="notice"
-            style={{ marginBottom: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-          >
-            <strong>Send billing email</strong>
-            <p style={{ margin: "8px 0 0" }}>{sendBanner}</p>
+          <div className="adminNotice adminNotice--error" style={{ marginBottom: 14 }}>
+            <strong className="adminNoticeTitle">Send billing email</strong>
+            <p className="adminNoticeBody">{sendBanner}</p>
           </div>
         ) : null}
         <form
@@ -143,7 +137,7 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
           encType="multipart/form-data"
           onSubmit={(ev) => void handleSend(ev)}
         >
-          <label>
+          <label className="adminLabel">
             <strong>Client Name</strong>
             <AdminClientEmailCombobox
               options={submittedClients}
@@ -153,35 +147,34 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
               placeholder="Search by name…"
             />
           </label>
-          <label>
+          <label className="adminLabel">
             <strong>Service Fee (PhP)</strong>
             <input name="baseAmountPhp" type="number" min={1} step={1} required placeholder="3500" />
           </label>
-          <label>
+          <label className="adminLabel">
             Note to client (optional, shown on payment page)
             <textarea
               name="clientNote"
               rows={3}
               placeholder="e.g. 1701A amendment — as discussed"
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 12 }}
             />
           </label>
-          <div style={{ display: "grid", gap: 10 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>Billing images (optional, up to 3)</span>
-            <label style={{ fontSize: 14, color: "#475569" }}>
+          <div className="adminFieldset">
+            <p className="adminFieldsetTitle">Billing images (optional, up to 3)</p>
+            <label className="muted adminLabel">
               Image 1
-              <input name="billingAttachment1" type="file" accept="image/*" style={{ marginTop: 6, display: "block" }} />
+              <input name="billingAttachment1" type="file" accept="image/*" />
             </label>
-            <label style={{ fontSize: 14, color: "#475569" }}>
+            <label className="muted adminLabel">
               Image 2
-              <input name="billingAttachment2" type="file" accept="image/*" style={{ marginTop: 6, display: "block" }} />
+              <input name="billingAttachment2" type="file" accept="image/*" />
             </label>
-            <label style={{ fontSize: 14, color: "#475569" }}>
+            <label className="muted adminLabel">
               Image 3
-              <input name="billingAttachment3" type="file" accept="image/*" style={{ marginTop: 6, display: "block" }} />
+              <input name="billingAttachment3" type="file" accept="image/*" />
             </label>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div className="adminActions">
             <button type="button" className="btn btnSecondary" disabled={previewing || sending} onClick={handlePreview}>
               {previewing ? "Loading preview…" : "Preview billing email"}
             </button>
@@ -192,21 +185,15 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
         </form>
 
         {previewHtml ? (
-          <div style={{ marginTop: 28 }}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 17, color: "#0f172a" }}>Billing email preview</h3>
-            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>
+          <div className="adminPreviewWrap" style={{ marginTop: 28 }}>
+            <h3 className="adminPreviewTitle">Billing email preview</h3>
+            <p className="muted adminPreviewHint">
               Nothing was sent. Scroll inside the frame to see the full message, images, and HTML rendering.
             </p>
             <iframe
               title="Billing email preview"
               srcDoc={previewHtml}
-              style={{
-                width: "100%",
-                minHeight: 720,
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                background: "#fff",
-              }}
+              className="adminPreviewFrame"
             />
           </div>
         ) : null}

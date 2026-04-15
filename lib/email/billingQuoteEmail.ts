@@ -78,10 +78,11 @@ export function buildBillingQuoteEmail(opts: {
   const textBody = joinTextParagraphs([
     `Hi ${clientFullName},`,
     "Your tax evaluation has been completed.",
-    "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing.",
+    "Please see the attached file for your computed results and recommended adjustment. The final tax computation was generated using eBIRForms software, showing the difference between your original filing with the newly optimized filing.",
     `If you would like to proceed, you may complete your payment at ${payUrl}`,
     "Once payment is confirmed, we will handle the correction and filing process accordingly.",
     "If your taxes are negative it will be carried over as a tax credit for the next taxable year.",
+    "Remember, you should only pay what is officially filed in your filed BIR Form 1701A.",
     "If anything in the evaluation needs clarification, feel free to reply to this email.",
     "Sincerely,",
     "Reiner",
@@ -110,7 +111,7 @@ export function buildBillingQuoteEmail(opts: {
     emailParagraphHtml(`Hi ${escapeHtml(clientFullName)},`),
     emailParagraphHtml("Your tax evaluation has been completed."),
     emailParagraphHtml(
-      "Please see the attached file for your computed results and recommended adjustment. The final tax computation was performed using BIR-accredited software, showing your newly optimized filing."
+      "Please see the attached file for your computed results and recommended adjustment. The final tax computation was generated using eBIRForms software, showing the difference between your original filing with the newly optimized filing."
     ),
     emailParagraphHtml(`If you would like to proceed, you may complete your payment at ${payLinkHtml}`),
     emailParagraphHtml(
@@ -118,6 +119,9 @@ export function buildBillingQuoteEmail(opts: {
     ),
     emailParagraphHtml(
       "If your taxes are negative it will be carried over as a tax credit for the next taxable year."
+    ),
+    emailParagraphHtml(
+      "<b>Remember, you should only pay what is officially filed in your filed BIR Form 1701A.</b>"
     ),
     emailParagraphHtml("If anything in the evaluation needs clarification, feel free to reply to this email."),
     emailParagraphHtml("Sincerely,<br/>Reiner"),

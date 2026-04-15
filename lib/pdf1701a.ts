@@ -10,6 +10,8 @@ const LINE_SMALL = 9;
 const LINE = 11;
 const TABLE_LINE = 9.5;
 const MAX_W = PAGE_W - 2 * M;
+const GRID = rgb(0.58, 0.64, 0.72);
+const BAND = rgb(0.9, 0.92, 0.95);
 
 function str(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -43,14 +45,9 @@ function taxpayerTypeLabel(v: unknown): string {
 }
 
 function atcLabel(v: unknown): string {
-  const m: Record<string, string> = {
-    II012: "II012 — Business Income-Graduated IT Rates",
-    II014: "II014 — Income from Profession-Graduated IT Rates",
-    II015: "II015 — Business Income-8% IT Rate",
-    II017: "II017 — Income from Profession-8% IT Rate",
-  };
-  const k = str(v);
-  return m[k] || k || "—";
+  // Business rule: downloadable PDF must always show a fixed ATC display value.
+  if (!str(v)) return "—";
+  return 'II017 "II014 Income from Profession-Graduated IT Rates"';
 }
 
 function civilLabel(v: unknown): string {
@@ -65,10 +62,16 @@ function civilLabel(v: unknown): string {
 }
 
 function taxRateLabel(v: unknown): string {
-  if (v === "GRAD_OSD") return "Graduated Rates with OSD as method of deduction";
-  if (v === "EIGHT_PERCENT")
-    return "8% in lieu of Graduated Rates under Sec. 24(A) & Percentage Tax under Sec. 116 of the NIRC";
-  return str(v) || "—";
+  // Business rule: downloadable PDF must always show Item 19 as GRAD_OSD wording.
+  if (!str(v)) return "—";
+  return "Graduated Rates with OSD as method of deduction";
+}
+
+function yesNoInline(v: unknown): string {
+  const s = str(v).toUpperCase();
+  if (s === "YES") return "[X] Yes   [ ] No";
+  if (s === "NO") return "[ ] Yes   [X] No";
+  return "[ ] Yes   [ ] No";
 }
 
 function overpayLabel(v: unknown): string {
@@ -182,19 +185,61 @@ function drawParagraph(
 
 function drawFormHeader(page: PDFPage, font: PDFFont, fontBold: PDFFont, pageNum: 1 | 2, yStart: number): number {
   let y = yStart;
-  page.drawText("BIR Form No. 1701A — January 2018 (ENCS)", { x: M, y, size: 9, font });
-  y -= 14;
-  page.drawText("Annual Income Tax Return — Individuals (Business/Profession)", { x: M, y, size: 10, font: fontBold });
-  y -= 14;
-  page.drawText(`PAGE ${pageNum} OF 2 — Client evaluation copy (values as submitted)`, {
-    x: M,
-    y,
-    size: 9,
+  const outerW = PAGE_W - 2 * M;
+  const outerH = 96;
+  const leftW = 108;
+  const rightW = 152;
+  const midW = outerW - leftW - rightW;
+  const top = y;
+  const bottom = y - outerH;
+
+  page.drawRectangle({ x: M, y: bottom, width: outerW, height: outerH, borderColor: GRID, borderWidth: 0.9 });
+  page.drawLine({ start: { x: M + leftW, y: top }, end: { x: M + leftW, y: bottom }, color: GRID, thickness: 0.7 });
+  page.drawLine({
+    start: { x: M + leftW + midW, y: top },
+    end: { x: M + leftW + midW, y: bottom },
+    color: GRID,
+    thickness: 0.7,
+  });
+
+  page.drawText("BIR Form No.", { x: M + 24, y: top - 16, size: 8.5, font });
+  page.drawText("1701A", { x: M + 26, y: top - 38, size: 20, font: fontBold });
+  page.drawText("January 2018 (ENCS)", { x: M + 16, y: top - 50, size: 7.5, font });
+  page.drawText(`Page ${pageNum}`, { x: M + 38, y: top - 70, size: 8, font: fontBold });
+
+  page.drawText("Annual Income Tax Return", { x: M + leftW + 92, y: top - 20, size: 15, font: fontBold });
+  page.drawText("Individuals Earning Income PURELY from Business/Profession", {
+    x: M + leftW + 22,
+    y: top - 35,
+    size: 8.5,
+    font: fontBold,
+  });
+  page.drawText("[Graduated rates with OSD or 8% flat income tax rate]", {
+    x: M + leftW + 68,
+    y: top - 46,
+    size: 7.8,
     font,
   });
-  y -= 18;
-  page.drawLine({ start: { x: M, y: y + 8 }, end: { x: PAGE_W - M, y: y + 8 }, thickness: 0.5 });
-  y -= 8;
+  page.drawText("Values shown mirror the submitted portal evaluation fields.", {
+    x: M + leftW + 54,
+    y: top - 62,
+    size: 7.8,
+    font,
+  });
+
+  page.drawText("Client evaluation copy", { x: M + leftW + midW + 22, y: top - 18, size: 8.5, font: fontBold });
+  page.drawText("Not a BIR-filed return", { x: M + leftW + midW + 26, y: top - 31, size: 7.6, font });
+  page.drawRectangle({
+    x: M + leftW + midW + 22,
+    y: top - 78,
+    width: rightW - 44,
+    height: 34,
+    borderColor: GRID,
+    borderWidth: 0.6,
+  });
+  page.drawText("1701A", { x: M + leftW + midW + 57, y: top - 60, size: 10, font: fontBold });
+
+  y -= outerH + 12;
   return y;
 }
 
@@ -286,7 +331,7 @@ function drawPart1FormLikeRows(
       y: y - rowH,
       width: noW,
       height: rowH,
-      borderColor: rgb(0.8, 0.84, 0.89),
+      borderColor: GRID,
       borderWidth: 0.6,
     });
     page.drawRectangle({
@@ -294,22 +339,23 @@ function drawPart1FormLikeRows(
       y: y - rowH,
       width: labelW,
       height: rowH,
-      borderColor: rgb(0.8, 0.84, 0.89),
+      borderColor: GRID,
       borderWidth: 0.6,
+      color: rgb(0.96, 0.97, 0.98),
     });
     page.drawRectangle({
       x: x + noW + labelW,
       y: y - rowH,
       width: valueW,
       height: rowH,
-      borderColor: rgb(0.8, 0.84, 0.89),
+      borderColor: GRID,
       borderWidth: 0.6,
     });
 
     page.drawText(r.no, { x: x + 6, y: y - 10, size: cellFontSize, font: fontBold });
     const topTextY = y - 10;
     for (let i = 0; i < labelLines.length; i++) {
-      page.drawText(labelLines[i], { x: x + noW + 4, y: topTextY - i * lineH, size: cellFontSize, font });
+      page.drawText(labelLines[i], { x: x + noW + 4, y: topTextY - i * lineH, size: cellFontSize, font: fontBold });
     }
     for (let i = 0; i < valueLines.length; i++) {
       page.drawText(valueLines[i], {
@@ -326,6 +372,70 @@ function drawPart1FormLikeRows(
   return y;
 }
 
+function drawSectionBand(page: PDFPage, fontBold: PDFFont, label: string, yStart: number): number {
+  const h = 16;
+  page.drawRectangle({
+    x: M,
+    y: yStart - h + 2,
+    width: PAGE_W - 2 * M,
+    height: h,
+    color: BAND,
+    borderColor: GRID,
+    borderWidth: 0.8,
+  });
+  page.drawText(label, { x: M + 8, y: yStart - 10, size: 9, font: fontBold });
+  return yStart - h - 2;
+}
+
+function drawTopQuestionRow(page: PDFPage, font: PDFFont, fontBold: PDFFont, payload: AnyObj, yStart: number): number {
+  const h = 44;
+  const w = PAGE_W - 2 * M;
+  const colW = w / 3;
+  const top = yStart;
+  const bottom = yStart - h;
+
+  page.drawRectangle({
+    x: M,
+    y: bottom,
+    width: w,
+    height: h,
+    color: BAND,
+    borderColor: GRID,
+    borderWidth: 0.8,
+  });
+  page.drawLine({ start: { x: M + colW, y: top }, end: { x: M + colW, y: bottom }, color: GRID, thickness: 0.6 });
+  page.drawLine({
+    start: { x: M + colW * 2, y: top },
+    end: { x: M + colW * 2, y: bottom },
+    color: GRID,
+    thickness: 0.6,
+  });
+
+  const periodMonth = str(payload.forYearMonth) || "MM";
+  const periodYear = str(payload.forYearYear) || str(payload.taxYear) || "YYYY";
+  const periodText = `${periodMonth} / ${periodYear}`;
+
+  page.drawText("1 For the Year (MM / YYYY)", { x: M + 8, y: top - 14, size: 8.5, font: fontBold });
+  page.drawRectangle({
+    x: M + 8,
+    y: top - 36,
+    width: 94,
+    height: 16,
+    borderColor: rgb(0.55, 0.62, 0.72),
+    borderWidth: 0.6,
+    color: rgb(1, 1, 1),
+  });
+  page.drawText(periodText, { x: M + 14, y: top - 30, size: 8, font });
+
+  page.drawText("2 Amended Return?", { x: M + colW + 8, y: top - 14, size: 8.5, font: fontBold });
+  page.drawText(yesNoInline(payload.amendedReturn), { x: M + colW + 8, y: top - 30, size: 8, font });
+
+  page.drawText("3 Short Period Return?", { x: M + colW * 2 + 8, y: top - 14, size: 8.5, font: fontBold });
+  page.drawText(yesNoInline(payload.shortPeriodReturn), { x: M + colW * 2 + 8, y: top - 30, size: 8, font });
+
+  return yStart - h - 12;
+}
+
 function table2Col(
   page: PDFPage,
   font: PDFFont,
@@ -334,17 +444,35 @@ function table2Col(
   yStart: number
 ): number {
   let y = yStart;
-  page.drawText("Particulars", { x: M, y, size: 7, font: fontBold });
-  page.drawText("A) Taxpayer/Filer", { x: 300, y, size: 7, font: fontBold });
-  page.drawText("B) Spouse", { x: 455, y, size: 7, font: fontBold });
-  y -= TABLE_LINE + 3;
+  const leftW = 252;
+  const colW = 118;
+  const rowH = 16;
+
+  page.drawRectangle({ x: M, y: y - rowH + 2, width: leftW, height: rowH, color: rgb(0.97, 0.98, 0.99), borderColor: GRID, borderWidth: 0.6 });
+  page.drawRectangle({ x: M + leftW, y: y - rowH + 2, width: colW, height: rowH, color: rgb(0.97, 0.98, 0.99), borderColor: GRID, borderWidth: 0.6 });
+  page.drawRectangle({
+    x: M + leftW + colW,
+    y: y - rowH + 2,
+    width: colW,
+    height: rowH,
+    color: rgb(0.97, 0.98, 0.99),
+    borderColor: GRID,
+    borderWidth: 0.6,
+  });
+  page.drawText("Particulars", { x: M + 6, y: y - 10, size: 7.3, font: fontBold });
+  page.drawText("A) Taxpayer/Filer", { x: M + leftW + 6, y: y - 10, size: 7.3, font: fontBold });
+  page.drawText("B) Spouse", { x: M + leftW + colW + 6, y: y - 10, size: 7.3, font: fontBold });
+  y -= rowH + 4;
 
   for (const r of rows) {
-    const lab = r.label.length > 48 ? r.label.slice(0, 46) + "…" : r.label;
-    page.drawText(lab, { x: M, y, size: 7, font });
-    page.drawText(str(r.a) || "—", { x: 300, y, size: 7, font });
-    page.drawText(str(r.b) || "—", { x: 455, y, size: 7, font });
-    y -= TABLE_LINE;
+    const lab = r.label.length > 62 ? r.label.slice(0, 60) + "…" : r.label;
+    page.drawRectangle({ x: M, y: y - rowH + 2, width: leftW, height: rowH, borderColor: GRID, borderWidth: 0.6 });
+    page.drawRectangle({ x: M + leftW, y: y - rowH + 2, width: colW, height: rowH, borderColor: GRID, borderWidth: 0.6 });
+    page.drawRectangle({ x: M + leftW + colW, y: y - rowH + 2, width: colW, height: rowH, borderColor: GRID, borderWidth: 0.6 });
+    page.drawText(lab, { x: M + 6, y: y - 10, size: 7.1, font });
+    page.drawText(str(r.a) || "0.00", { x: M + leftW + 6, y: y - 10, size: 7.1, font });
+    page.drawText(str(r.b) || "0.00", { x: M + leftW + colW + 6, y: y - 10, size: 7.1, font });
+    y -= rowH + 1;
     if (y < 70) break;
   }
   return y;
@@ -368,25 +496,19 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  const period = [str(payload.forYearMonth), str(payload.forYearYear)].filter(Boolean).join(" / ") || str(payload.taxYear);
-
   // —— Page 1 ——
   const p1 = pdfDoc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H - M;
 
   y = drawFormHeader(p1, font, fontBold, 1, y);
   y = drawResubmitNotice(p1, font, y, options?.submit1701aCount);
-
-  p1.drawText("PART I — BACKGROUND INFORMATION ON TAXPAYER/FILER", { x: M, y, size: 9, font: fontBold });
-  y -= LINE + 2;
+  y = drawTopQuestionRow(p1, font, fontBold, payload, y);
+  y = drawSectionBand(p1, fontBold, "PART I — BACKGROUND INFORMATION ON TAXPAYER/FILER", y);
   y = drawPart1FormLikeRows(
     p1,
     font,
     fontBold,
     [
-      { no: "1", label: "For the Year (MM / YYYY)", value: period },
-      { no: "2", label: "Amended Return?", value: yn(payload.amendedReturn) },
-      { no: "3", label: "Short Period Return?", value: yn(payload.shortPeriodReturn) },
       { no: "4", label: "Taxpayer Identification Number (TIN)", value: tin(payload) },
       { no: "5", label: "RDO Code", value: str(payload.rdo) },
       { no: "6", label: "Taxpayer Type", value: taxpayerTypeLabel(payload.taxpayerType) },
@@ -417,9 +539,8 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
     y
   );
 
-  y -= 10;
-  p1.drawText("PART II — TOTAL TAX PAYABLE", { x: M, y, size: 9, font: fontBold });
-  y -= LINE + 2;
+  y -= 8;
+  y = drawSectionBand(p1, fontBold, "PART II — TOTAL TAX PAYABLE", y);
 
   y = table2Col(p1, font, fontBold, [
     { label: "20  Tax Due", a: str(payload.taxDue20A), b: str(payload.taxDue20B) },
@@ -446,11 +567,11 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
     },
   ], y);
 
-  y -= 8;
+  y -= 10;
   y = rowPair(p1, font, "30  Aggregate Amount Payable/(Overpayment) (29A + 29B)", str(payload.aggregate30), y);
 
-  y -= 4;
-  y = rowPair(p1, font, "Overpayment option (if applicable)", overpayLabel(payload.overpaymentOption), y);
+  y -= 6;
+  y = rowPair(p1, font, "Overpayment option (if applicable) — mark one", overpayLabel(payload.overpaymentOption), y);
 
   p1.drawText("— End of Page 1 —", { x: M, y: 42, size: 8, font });
   p1.drawText("Generated for evaluation / admin review — not a BIR-filed return.", {
@@ -467,8 +588,7 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
   y = drawResubmitNotice(p2, font, y, options?.submit1701aCount);
 
   if (hasPart4Object(payload)) {
-    p2.drawText("PART IV — COMPUTATION OF INCOME TAX (AS FILED)", { x: M, y, size: 10, font: fontBold });
-    y -= LINE + 4;
+    y = drawSectionBand(p2, fontBold, "PART IV — COMPUTATION OF INCOME TAX (AS FILED)", y);
     y = drawParagraph(
       p2,
       font,
@@ -477,7 +597,7 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
       y,
       LINE_SMALL
     );
-    y -= 4;
+    y -= 2;
     y = drawPart4Sections(p2, font, fontBold, payload, PART4_SECTIONS, y);
 
     y -= 6;
@@ -504,8 +624,7 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
       font,
     });
   } else {
-    p2.drawText("COMPUTATION & SCHEDULES (AS FILED) — LEGACY SUMMARY", { x: M, y, size: 10, font: fontBold });
-    y -= LINE + 6;
+    y = drawSectionBand(p2, fontBold, "COMPUTATION & SCHEDULES (AS FILED) — LEGACY SUMMARY", y);
     y = drawParagraph(
       p2,
       font,

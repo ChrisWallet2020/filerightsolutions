@@ -10,7 +10,7 @@ export default async function AdminClientEmailerPage() {
   return (
     <section className="section">
       <h1>Client emailer</h1>
-      <p className="muted" style={{ marginTop: 8, maxWidth: 760, lineHeight: 1.65 }}>
+      <p className="muted adminPageIntro">
         Send custom client emails using the same layout and footer as billing emails. Enter any recipient email
         address, preview the HTML, then send.
       </p>

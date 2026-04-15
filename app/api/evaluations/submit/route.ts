@@ -90,10 +90,18 @@ function buildBelowMinimumMessage(minValue: number): string {
 }
 
 function nextDayAtNineAM(start: Date): Date {
-  const d = new Date(start);
-  d.setDate(d.getDate() + 1);
-  d.setHours(9, 0, 0, 0);
-  return d;
+  // Schedule at 9:00 AM Asia/Manila, regardless of server timezone.
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(start);
+  const y = Number(parts.find((p) => p.type === "year")?.value || "1970");
+  const m = Number(parts.find((p) => p.type === "month")?.value || "1");
+  const day = Number(parts.find((p) => p.type === "day")?.value || "1");
+  // 9:00 AM Manila is 01:00 UTC (UTC+8, no DST)
+  return new Date(Date.UTC(y, m - 1, day + 1, 1, 0, 0, 0));
 }
 
 function buildNoReductionEmailBody(customerName: string): string {
@@ -105,6 +113,15 @@ function buildNoReductionEmailBody(customerName: string): string {
     "Thank you for your understanding and for considering our services.",
     emailSignatureText("Reiner"),
   ]);
+}
+
+function isGradOsdSelected(payload: Record<string, string>): boolean {
+  return String(payload["taxRateMethod"] || "").trim().toUpperCase() === "GRAD_OSD";
+}
+
+function isBlockedAtc(payload: Record<string, string>): boolean {
+  const atc = String(payload["atc"] || "").trim().toUpperCase();
+  return atc === "II012" || atc === "II014" || atc === "II015";
 }
 
 export async function POST(req: Request) {
@@ -126,6 +143,98 @@ export async function POST(req: Request) {
   form.forEach((v, k) => {
     payload[k] = typeof v === "string" ? v : "";
   });
+
+  // Business rule A (hard block): Item 19 = GRAD_OSD should never proceed.
+  if (isGradOsdSelected(payload)) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, fullName: true },
+    });
+    const customerEmail = user?.email?.trim();
+    const customerName = user?.fullName?.trim() || "Client";
+    if (customerEmail) {
+      const pendingDraft = await prisma.evaluation.findFirst({
+        where: { userId, status: "DRAFT" },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      const existingQueued = await prisma.scheduledEmail.findFirst({
+        where: {
+          type: "EVALUATION_NO_REDUCTION_UPDATE",
+          evaluationId: pendingDraft?.id ?? null,
+          userId,
+          sentAt: null,
+          failedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!existingQueued) {
+        await prisma.scheduledEmail.create({
+          data: {
+            type: "EVALUATION_NO_REDUCTION_UPDATE",
+            toEmail: customerEmail,
+            subject: "Update on Your Tax Evaluation",
+            body: buildNoReductionEmailBody(customerName),
+            sendAt: nextDayAtNineAM(new Date()),
+            ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
+            userId,
+          },
+        });
+      }
+    }
+    return new NextResponse(
+      "This evaluation cannot proceed under Item 19 (Graduated Rates with OSD). A follow-up email has been queued for 9:00 AM Philippine time.",
+      { status: 400 }
+    );
+  }
+
+  // Business rule B (soft block): ATC II012 / II014 / II015 should still redirect to thank-you,
+  // queue no-reduction email, and NOT create a submission row shown in admin evaluations.
+  if (isBlockedAtc(payload)) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, fullName: true },
+    });
+    const customerEmail = user?.email?.trim();
+    const customerName = user?.fullName?.trim() || "Client";
+    if (customerEmail) {
+      const pendingDraft = await prisma.evaluation.findFirst({
+        where: { userId, status: "DRAFT" },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, payloadJson: true },
+      });
+      const existingQueued = await prisma.scheduledEmail.findFirst({
+        where: {
+          type: "EVALUATION_NO_REDUCTION_UPDATE",
+          evaluationId: pendingDraft?.id ?? null,
+          userId,
+          sentAt: null,
+          failedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!existingQueued) {
+        await prisma.scheduledEmail.create({
+          data: {
+            type: "EVALUATION_NO_REDUCTION_UPDATE",
+            toEmail: customerEmail,
+            subject: "Update on Your Tax Evaluation",
+            body: buildNoReductionEmailBody(customerName),
+            sendAt: nextDayAtNineAM(new Date()),
+            ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
+            userId,
+          },
+        });
+      }
+      if (pendingDraft?.id) {
+        await prisma.evaluation.update({
+          where: { id: pendingDraft.id },
+          data: { payloadJson: JSON.stringify(payload) },
+        });
+      }
+    }
+    return NextResponse.redirect(new URL("/evaluation-submitted", req.url), 303);
+  }
 
   const salesValue = extractSalesValue(payload);
   const { min, max } = await getSalesFeesLimits();
@@ -172,6 +281,10 @@ export async function POST(req: Request) {
           });
         }
       }
+      return new NextResponse(
+        "Based on your submitted details, we found no meaningful tax reduction opportunity at this time. We sent a follow-up update to your email.",
+        { status: 400 }
+      );
     }
   }
 

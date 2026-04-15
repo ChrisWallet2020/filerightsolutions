@@ -5,6 +5,7 @@ import { EMAIL_TYPE, ORDER_STATUS } from "@/lib/constants";
 import { config } from "@/lib/config";
 import { sendPaymentReceivedTaxFilingInProgressForOrder } from "@/lib/email/sendPaymentReceivedTaxFilingInProgress";
 import { syncAgentReferralsForPaidOrder } from "@/lib/agentReferralsSync";
+import { ensureFilingTaskForPaidOrder } from "@/lib/filingTasks";
 
 export async function POST(req: Request) {
   if (!config.dragonpay.secret) {
@@ -42,10 +43,12 @@ export async function POST(req: Request) {
 
   // Idempotent transition
   if (becamePaid) {
+    const paidAt = new Date();
     await prisma.order.update({
       where: { id: order.id },
-      data: { status: ORDER_STATUS.PAID, paidAt: new Date() },
+      data: { status: ORDER_STATUS.PAID, paidAt },
     });
+    await ensureFilingTaskForPaidOrder({ id: order.id, paidAt });
   }
 
   await prisma.payment.create({

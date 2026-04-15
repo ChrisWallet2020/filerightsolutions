@@ -22,3 +22,13 @@ export const EMAIL_TYPE = {
 } as const;
 
 export type EmailType = (typeof EMAIL_TYPE)[keyof typeof EMAIL_TYPE];
+
+export const FILING_TASK_STATUS = {
+  READY_TO_FILE: "READY_TO_FILE",
+  IN_PROGRESS: "IN_PROGRESS",
+  FILED: "FILED",
+  ON_HOLD: "ON_HOLD",
+  QC_DONE: "QC_DONE",
+} as const;
+
+export type FilingTaskStatus = (typeof FILING_TASK_STATUS)[keyof typeof FILING_TASK_STATUS];

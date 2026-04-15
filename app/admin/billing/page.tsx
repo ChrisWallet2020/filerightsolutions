@@ -45,7 +45,7 @@ export default async function AdminBillingPage({
   return (
     <section className="section">
       <h1>Billing &amp; quotes</h1>
-      <p className="muted">
+      <p className="muted adminPageIntro">
         Search by client <b>full name</b> (they must have already <b>submitted</b> their 1701A evaluation). The billing
         email is sent to their sign-in email. Enter the service fee.{" "}
         <b>Send billing email</b> creates the quote and sends the payment email. You can attach up to three images if
@@ -53,13 +53,10 @@ export default async function AdminBillingPage({
       </p>
 
       {emailFailed ? (
-        <div
-          className="notice"
-          style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-        >
-          <strong>Email failed to send</strong>
+        <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+          <strong className="adminNoticeTitle">Email failed to send</strong>
           {emailReason === "provider_content_filter" ? (
-            <p style={{ margin: "8px 0 0" }}>
+            <p className="adminNoticeBody">
               The quote was still created. Your mail host (e.g. GoDaddy) accepted the login but{" "}
               <strong>blocked the message as spam or suspicious content</strong> (SMTP 552 / content filter)—this is
               not a Vercel bug. Try again <strong>without billing images</strong>, use a shorter client note, or paste
@@ -74,7 +71,7 @@ export default async function AdminBillingPage({
               (<code>BILLING_QUOTE_EMAIL_FAILED</code>).
             </p>
           ) : emailReason === "smtp_send_failed" ? (
-            <p style={{ margin: "8px 0 0" }}>
+            <p className="adminNoticeBody">
               The quote was still created. SMTP is configured, but the provider rejected this message. Check{" "}
               <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>
                 Vercel logs
@@ -83,13 +80,13 @@ export default async function AdminBillingPage({
               not allowed for your <code>SMTP_USER</code>. You can send the payment link manually below.
             </p>
           ) : emailReason === "missing_smtp_env" ? (
-            <p style={{ margin: "8px 0 0" }}>
+            <p className="adminNoticeBody">
               The quote was still created. Set <code>SMTP_HOST</code>, <code>SMTP_USER</code>, and{" "}
               <code>SMTP_PASS</code> for <strong>Production</strong> in Vercel, redeploy, then retry. See{" "}
               <code>.env.example</code>. Copy the link below meanwhile.
             </p>
           ) : (
-            <p style={{ margin: "8px 0 0" }}>
+            <p className="adminNoticeBody">
               The quote was still created. Configure SMTP (see <code>.env.example</code>) or send the link manually
               below.
             </p>
@@ -98,12 +95,9 @@ export default async function AdminBillingPage({
       ) : null}
 
       {emailDev ? (
-        <div
-          className="notice"
-          style={{ marginTop: 14, borderColor: "#fde68a", background: "#fffbeb", color: "#92400e" }}
-        >
-          <strong>Development: email not delivered</strong>
-          <p style={{ margin: "8px 0 0" }}>
+        <div className="adminNotice adminNotice--warn" style={{ marginTop: 14 }}>
+          <strong className="adminNoticeTitle">Development: email not delivered</strong>
+          <p className="adminNoticeBody">
             SMTP is not configured, so the message was only logged on the server (see terminal). The quote was still
             created—copy the payment link below or set <code>SMTP_*</code> in <code>.env</code> to send real mail.
           </p>
@@ -111,18 +105,7 @@ export default async function AdminBillingPage({
       ) : null}
 
       {emailed && !emailFailed && !emailDev ? (
-        <div
-          className="notice"
-          style={{
-            marginTop: 14,
-            width: "100%",
-            maxWidth: 760,
-            borderColor: "#86efac",
-            background: "#f0fdf4",
-            padding: "8px 12px",
-            color: "#14532d",
-          }}
-        >
+        <div className="adminNotice adminNotice--success" style={{ marginTop: 14, width: "100%", maxWidth: 760 }}>
           <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.01em" }}>Billing email sent</div>
           <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.5, color: "#166534" }}>
             Delivery is usually immediate. If the client doesn&apos;t see it, suggest spam or promotions.
@@ -131,22 +114,16 @@ export default async function AdminBillingPage({
       ) : null}
 
       {previewErrorMessage ? (
-        <div
-          className="notice"
-          style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-        >
-          <strong>Billing preview failed</strong>
-          <p style={{ margin: "8px 0 0" }}>{previewErrorMessage}</p>
+        <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+          <strong className="adminNoticeTitle">Billing preview failed</strong>
+          <p className="adminNoticeBody">{previewErrorMessage}</p>
         </div>
       ) : null}
 
       {quoteErrorMessage ? (
-        <div
-          className="notice"
-          style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-        >
-          <strong>Unable to create quote</strong>
-          <p style={{ margin: "8px 0 0" }}>{quoteErrorMessage}</p>
+        <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+          <strong className="adminNoticeTitle">Unable to create quote</strong>
+          <p className="adminNoticeBody">{quoteErrorMessage}</p>
         </div>
       ) : null}
 

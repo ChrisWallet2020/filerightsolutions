@@ -71,12 +71,12 @@ export function ClientEmailerForm() {
   }
 
   return (
-    <div className="checkoutGrid" style={{ marginTop: 22, gridTemplateColumns: "1fr", maxWidth: 760 }}>
-      <div className="checkoutBox">
+    <div className="adminStack" style={{ maxWidth: 760 }}>
+      <div className="adminCard">
         <h2>Custom client email</h2>
 
-        <div className="form" style={{ marginTop: 4 }}>
-          <label>
+        <div className="form">
+          <label className="adminLabel">
             <strong>Client email</strong>
             <input
               type="email"
@@ -87,7 +87,7 @@ export function ClientEmailerForm() {
             />
           </label>
 
-          <label>
+          <label className="adminLabel">
             <strong>Subject</strong>
             <input
               type="text"
@@ -98,7 +98,7 @@ export function ClientEmailerForm() {
             />
           </label>
 
-          <label>
+          <label className="adminLabel">
             <strong>Email content</strong>
             <textarea
               value={body}
@@ -108,11 +108,11 @@ export function ClientEmailerForm() {
             />
           </label>
 
-          <p className="muted" style={{ margin: 0, lineHeight: 1.6 }}>
+          <p className="muted adminBodyText">
             Your text is wrapped in the standard FileRight email layout and legal footer, same as billing emails.
           </p>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          <div className="adminActions">
             <button
               type="button"
               className="btn btnSecondary"
@@ -133,40 +133,26 @@ export function ClientEmailerForm() {
         </div>
 
         {err ? (
-          <div
-            className="notice"
-            style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-          >
-            <strong>Client emailer</strong>
-            <p style={{ margin: "8px 0 0" }}>{err}</p>
+          <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Client emailer</strong>
+            <p className="adminNoticeBody">{err}</p>
           </div>
         ) : null}
 
         {devLogOnly ? (
-          <div
-            className="notice"
-            style={{ marginTop: 14, borderColor: "#fde68a", background: "#fffbeb", color: "#92400e" }}
-          >
-            <strong>Development mode</strong>
-            <p style={{ margin: "8px 0 0" }}>
-              SMTP is not configured on this environment, so the message was only logged on the server and was not
+          <div className="adminNotice adminNotice--warn" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Development mode</strong>
+            <p className="adminNoticeBody">
+              Graph mail is not configured on this environment, so the message was only logged on the server and was not
               delivered.
             </p>
           </div>
         ) : null}
 
         {sentTo && !devLogOnly ? (
-          <div
-            className="notice"
-            style={{
-              marginTop: 14,
-              borderColor: "#86efac",
-              background: "#f0fdf4",
-              color: "#14532d",
-            }}
-          >
-            <strong>Message sent</strong>
-            <p style={{ margin: "8px 0 0" }}>
+          <div className="adminNotice adminNotice--success" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Message sent</strong>
+            <p className="adminNoticeBody">
               Queued for <b>{sentTo}</b>. Delivery is usually immediate; ask the recipient to check spam or promotions if
               it does not arrive.
             </p>
@@ -174,28 +160,22 @@ export function ClientEmailerForm() {
         ) : null}
 
         {previewSubject ? (
-          <p className="muted" style={{ margin: "16px 0 0" }}>
+          <p className="muted adminBodyText" style={{ marginTop: 16 }}>
             Subject: <strong style={{ color: "var(--fg)" }}>{previewSubject}</strong>
           </p>
         ) : null}
 
         {previewHtml ? (
-          <div style={{ marginTop: 12 }}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 17, color: "var(--fg)" }}>Preview</h3>
-            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>
+          <div className="adminPreviewWrap">
+            <h3 className="adminPreviewTitle">Preview</h3>
+            <p className="muted adminPreviewHint">
               Nothing was sent. Scroll inside the frame to see the full message.
             </p>
             <iframe
               title="Custom client email preview"
               sandbox=""
               srcDoc={previewHtml}
-              style={{
-                width: "100%",
-                minHeight: 720,
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                background: "#fff",
-              }}
+              className="adminPreviewFrame"
             />
           </div>
         ) : null}

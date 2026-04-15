@@ -5,6 +5,7 @@ import { config } from "@/lib/config";
 import { verifyPaymongoWebhookSignature } from "@/lib/paymongo/verifyWebhook";
 import { sendPaymentReceivedTaxFilingInProgressForOrder } from "@/lib/email/sendPaymentReceivedTaxFilingInProgress";
 import { syncAgentReferralsForPaidOrder } from "@/lib/agentReferralsSync";
+import { ensureFilingTaskForPaidOrder } from "@/lib/filingTasks";
 
 /** Browsers and crawlers often GET this URL; PayMongo delivers events via POST only. */
 export async function GET() {
@@ -77,10 +78,12 @@ export async function POST(req: Request) {
   });
 
   if (isPaidEvent && order.status !== ORDER_STATUS.PAID) {
+    const paidAt = new Date();
     await prisma.order.update({
       where: { id: order.id },
-      data: { status: ORDER_STATUS.PAID, paidAt: new Date() },
+      data: { status: ORDER_STATUS.PAID, paidAt },
     });
+    await ensureFilingTaskForPaidOrder({ id: order.id, paidAt });
 
     await syncAgentReferralsForPaidOrder({
       id: order.id,

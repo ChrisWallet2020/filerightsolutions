@@ -1,20 +1,49 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+type AdminNavItem = { href: string; label: string };
+
+const NAV_ITEMS: AdminNavItem[] = [
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/evaluations", label: "Evaluations" },
+  { href: "/admin/evaluation-limits", label: "Evaluation limits" },
+  { href: "/admin/high-volume", label: "Submission controls" },
+  { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/filing-queue", label: "Filing queue" },
+  { href: "/admin/filing-complete-email", label: "Filing email" },
+  { href: "/admin/client-emailer", label: "Client emailer" },
+  { href: "/admin/agents", label: "Agents" },
+];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
   return (
     <div className="adminShell">
       <aside className="adminNav">
-        <div className="adminTitle">Admin</div>
-        <Link href="/admin/orders">Orders</Link>
-        <Link href="/admin/evaluations">Evaluations</Link>
-        <Link href="/admin/evaluation-limits">Evaluation Limits</Link>
-        <Link href="/admin/high-volume">Submission Controls</Link>
-        <Link href="/admin/billing">Billing</Link>
-        <Link href="/admin/filing-complete-email">Filing email</Link>
-        <Link href="/admin/client-emailer">Client emailer</Link>
-        <Link href="/admin/agents">Agents</Link>
+        <div className="adminTitleWrap">
+          <div className="adminTitle">Admin Workspace</div>
+          <div className="adminSubTitle">Operations and communications</div>
+        </div>
+        <nav className="adminTabNav" aria-label="Admin sections">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`adminTabLink ${isActive(item.href) ? "isActive" : ""}`}
+              aria-current={isActive(item.href) ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
         <form action="/api/admin/logout" method="post">
-          <button className="linkBtn" type="submit">Logout</button>
+          <button className="linkBtn adminLogoutBtn" type="submit">
+            Logout
+          </button>
         </form>
       </aside>
       <div className="adminMain">{children}</div>

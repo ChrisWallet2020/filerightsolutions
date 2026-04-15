@@ -9,13 +9,13 @@ export default async function AdminHighVolumePage() {
   const deadlinePassedEnabled = await isDeadlinePassedEnabled();
 
   return (
-    <main style={{ maxWidth: 860, margin: "0 auto", padding: "48px 20px" }}>
-      <h1 style={{ marginTop: 0 }}>Submission Controls</h1>
-      <p style={{ color: "#475569", lineHeight: 1.6 }}>
+    <section className="section" style={{ maxWidth: 860 }}>
+      <h1>Submission Controls</h1>
+      <p className="muted adminPageIntro">
         Manage submission behavior for evaluations, including temporary capacity limits and filing-period controls.
       </p>
 
-      <section style={card}>
+      <section className="adminCard" style={{ marginTop: 16 }}>
         <div style={{ display: "grid", gap: 10 }}>
           <div>
             <b>Current status:</b>{" "}
@@ -24,16 +24,16 @@ export default async function AdminHighVolumePage() {
             </span>
           </div>
 
-          <form action="/api/admin/site-settings/high-volume" method="post" style={{ display: "flex", gap: 10 }}>
+          <form action="/api/admin/site-settings/high-volume" method="post" className="adminActions">
             <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />
-            <button type="submit" style={btn}>
+            <button type="submit" className="btn">
               {enabled ? "Turn OFF (accept submissions)" : "Turn ON (pause submissions)"}
             </button>
           </form>
         </div>
       </section>
 
-      <section style={card}>
+      <section className="adminCard" style={{ marginTop: 14 }}>
         <div style={{ display: "grid", gap: 10 }}>
           <div>
             <b>Filing deadline notice:</b>{" "}
@@ -41,13 +41,13 @@ export default async function AdminHighVolumePage() {
               {deadlinePassedEnabled ? "Deadline mode ON" : "Deadline mode OFF"}
             </span>
           </div>
-          <p style={{ margin: 0, color: "#475569", lineHeight: 1.6 }}>
+          <p className="muted adminBodyText">
             When turned on, evaluation submit actions are blocked and users are shown the filing deadline notice page.
           </p>
 
-          <form action="/api/admin/site-settings/deadline-passed" method="post" style={{ display: "flex", gap: 10 }}>
+          <form action="/api/admin/site-settings/deadline-passed" method="post" className="adminActions">
             <input type="hidden" name="enabled" value={deadlinePassedEnabled ? "false" : "true"} />
-            <button type="submit" style={btn}>
+            <button type="submit" className="btn">
               {deadlinePassedEnabled
                 ? "Turn OFF (allow current-cycle submits)"
                 : "Turn ON (show deadline-passed notice)"}
@@ -55,24 +55,6 @@ export default async function AdminHighVolumePage() {
           </form>
         </div>
       </section>
-    </main>
+    </section>
   );
 }
-
-const card: React.CSSProperties = {
-  marginTop: 14,
-  border: "1px solid #e2e8f0",
-  borderRadius: 14,
-  padding: 16,
-  background: "white",
-};
-
-const btn: React.CSSProperties = {
-  background: "#1e40af",
-  color: "white",
-  border: "none",
-  borderRadius: 10,
-  padding: "10px 14px",
-  fontWeight: 800,
-  cursor: "pointer",
-};

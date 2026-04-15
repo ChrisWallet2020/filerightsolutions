@@ -12,11 +12,11 @@ export function AdminAgentActivityTable({
   return (
     <>
       <h1>{title}</h1>
-      <p className="muted" style={{ marginTop: 8, maxWidth: 960, lineHeight: 1.65 }}>
+      <p className="muted adminPageIntro" style={{ maxWidth: 960 }}>
         {subtitle}
       </p>
 
-      <div style={{ marginTop: 22, overflowX: "auto" }} className="table">
+      <div style={{ marginTop: 22, overflowX: "auto" }} className="table adminCard">
         <div
           className="tr th"
           style={{ gridTemplateColumns: "132px minmax(200px, 1.1fr) minmax(160px, 1fr) minmax(160px, 1fr) 118px 118px 88px" }}

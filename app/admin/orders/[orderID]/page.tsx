@@ -3,15 +3,30 @@ import { Button } from "@/components/ui/Button";
 import { config } from "@/lib/config";
 import { isAdminAuthed } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { ensureFilingTaskForPaidOrder } from "@/lib/filingTasks";
+import { ORDER_STATUS } from "@/lib/constants";
 
 export default async function OrderDetail({ params }: { params: { orderID: string } }) {
   if (!isAdminAuthed()) redirect("/admin/login");
 
-  const order = await prisma.order.findUnique({
-    where: { orderId: params.orderID },
-    include: { pkg: true, uploads: true, payments: true, emailLogs: true }
-  });
+  let order = null as Awaited<ReturnType<typeof prisma.order.findUnique>> | null;
+  try {
+    order = await prisma.order.findUnique({
+      where: { orderId: params.orderID },
+      include: { pkg: true, uploads: true, payments: true, emailLogs: true, filingTask: true },
+    });
+  } catch {
+    const fallback = await prisma.order.findUnique({
+      where: { orderId: params.orderID },
+      include: { pkg: true, uploads: true, payments: true, emailLogs: true },
+    });
+    order = fallback ? ({ ...fallback, filingTask: null } as typeof order) : null;
+  }
   if (!order) return <section className="section">Order not found.</section>;
+
+  if (order.status === ORDER_STATUS.PAID && !order.filingTask) {
+    await ensureFilingTaskForPaidOrder({ id: order.id, paidAt: order.paidAt });
+  }
 
   const uploadLink = `${config.baseUrl}/upload/${order.uploadToken}`;
 
@@ -33,6 +48,25 @@ export default async function OrderDetail({ params }: { params: { orderID: strin
           <div>{order.pkg.name}</div>
           <div className="muted">Fee: ₱{(order.amountPhp / 100).toLocaleString()}</div>
           <div className="muted">Status: {order.status}</div>
+        </div>
+      </div>
+
+      <div className="section">
+        <h2>Filing Workflow</h2>
+        <div className="box" style={{ maxWidth: 720 }}>
+          <div className="boxTitle">Task status</div>
+          <div className="muted">
+            {order.filingTask?.status || (order.status === ORDER_STATUS.PAID ? "READY_TO_FILE (auto)" : "Not created")}
+          </div>
+          {order.filingTask?.dueAt ? <div className="muted">Due: {order.filingTask.dueAt.toLocaleString()}</div> : null}
+          {order.filingTask?.filingReference ? (
+            <div className="muted">Filing reference: {order.filingTask.filingReference}</div>
+          ) : null}
+          <div style={{ marginTop: 10 }}>
+            <a className="link" href="/admin/filing-queue">
+              Open filing queue
+            </a>
+          </div>
         </div>
       </div>
 

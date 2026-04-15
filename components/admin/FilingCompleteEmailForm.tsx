@@ -88,12 +88,12 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
   }
 
   return (
-    <div className="checkoutGrid" style={{ marginTop: 22, gridTemplateColumns: "1fr", maxWidth: 760 }}>
-      <div className="checkoutBox">
+    <div className="adminStack" style={{ maxWidth: 760 }}>
+      <div className="adminCard">
         <h2>Filing confirmation email</h2>
 
-        <div className="form" style={{ marginTop: 4 }}>
-          <label>
+        <div className="form">
+          <label className="adminLabel">
             <strong>Client name</strong>
             <AdminClientEmailCombobox
               options={options}
@@ -105,17 +105,17 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
           </label>
 
           {lastSentAt ? (
-            <p className="muted" style={{ margin: 0, lineHeight: 1.55 }}>
+            <p className="muted adminBodyText">
               Last sent filing email: <strong style={{ color: "var(--fg)" }}>{new Date(lastSentAt).toLocaleString()}</strong>
             </p>
           ) : null}
 
-          <p className="muted" style={{ margin: 0, lineHeight: 1.6 }}>
+          <p className="muted adminBodyText">
             Only clients who have <b>paid</b> and <b>submitted</b> a 1701A evaluation appear here. The message is sent to
             their sign-in email.
           </p>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          <div className="adminActions">
             <button
               type="button"
               className="btn btnSecondary"
@@ -136,55 +136,38 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
         </div>
 
         {err ? (
-          <div
-            className="notice"
-            style={{ marginTop: 14, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}
-          >
-            <strong>Filing email</strong>
-            <p style={{ margin: "8px 0 0" }}>{err}</p>
+          <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Filing email</strong>
+            <p className="adminNoticeBody">{err}</p>
           </div>
         ) : null}
 
         {sent ? (
-          <div
-            className="notice"
-            style={{
-              marginTop: 14,
-              borderColor: "#86efac",
-              background: "#f0fdf4",
-              color: "#14532d",
-            }}
-          >
-            <strong>Message sent</strong>
-            <p style={{ margin: "8px 0 0" }}>
+          <div className="adminNotice adminNotice--success" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Message sent</strong>
+            <p className="adminNoticeBody">
               Queued for <b>{email.trim()}</b>. If the recipient does not see it, suggest spam or promotions.
             </p>
           </div>
         ) : null}
 
         {previewSubject ? (
-          <p className="muted" style={{ margin: "16px 0 0" }}>
+          <p className="muted adminBodyText" style={{ marginTop: 16 }}>
             Subject: <strong style={{ color: "var(--fg)" }}>{previewSubject}</strong>
           </p>
         ) : null}
 
         {previewHtml ? (
-          <div style={{ marginTop: 12 }}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 17, color: "var(--fg)" }}>Preview</h3>
-            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>
+          <div className="adminPreviewWrap">
+            <h3 className="adminPreviewTitle">Preview</h3>
+            <p className="muted adminPreviewHint">
               Nothing was sent. Scroll inside the frame to see the full message.
             </p>
             <iframe
               title="Email preview"
               sandbox=""
               srcDoc={previewHtml}
-              style={{
-                width: "100%",
-                minHeight: 720,
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                background: "#fff",
-              }}
+              className="adminPreviewFrame"
             />
           </div>
         ) : null}

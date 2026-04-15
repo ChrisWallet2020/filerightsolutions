@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed } from "@/lib/auth";
 import { EMAIL_TYPE, ORDER_STATUS, type OrderStatus } from "@/lib/constants";
+import { ensureFilingTaskForPaidOrder } from "@/lib/filingTasks";
 
 export async function POST(req: Request) {
   if (!isAdminAuthed()) {
@@ -20,7 +21,17 @@ export async function POST(req: Request) {
   const order = await prisma.order.findUnique({ where: { orderId } });
   if (!order) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  await prisma.order.update({ where: { id: order.id }, data: { status } });
+  const paidAt = status === ORDER_STATUS.PAID ? order.paidAt ?? new Date() : null;
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      status,
+      ...(status === ORDER_STATUS.PAID ? { paidAt } : {}),
+    },
+  });
+  if (status === ORDER_STATUS.PAID) {
+    await ensureFilingTaskForPaidOrder({ id: order.id, paidAt });
+  }
 
   // Queue emails for key transitions
   if (status === "IN_PROGRESS") {
