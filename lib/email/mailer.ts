@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-import { config } from "../config";
 
 type SendMailResult = { messageId: string };
 
@@ -9,16 +8,40 @@ export type MailAttachment = {
   contentType?: string;
 };
 
+/**
+ * Read SMTP from `process.env` at send time — not from `lib/config`.
+ * `lib/config` is imported by client components (e.g. the site header); Next.js can then
+ * omit non-`NEXT_PUBLIC_*` env values for that module graph, which would blank out SMTP on the server.
+ */
+function smtpEnv() {
+  return {
+    host: (process.env.SMTP_HOST || "").trim(),
+    port: Number(process.env.SMTP_PORT || "587"),
+    user: (process.env.SMTP_USER || "").trim(),
+    pass: (process.env.SMTP_PASS || "").trim(),
+    from: (process.env.SMTP_FROM || "").trim(),
+  };
+}
+
+function mailFromDisplayDefaults() {
+  return {
+    siteName: process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance",
+    supportEmail: (process.env.SUPPORT_EMAIL || "support@filerightsolutions.com").trim(),
+  };
+}
+
 function hasSmtpConfig(): boolean {
-  return Boolean(config.smtp.host && config.smtp.user && config.smtp.pass);
+  const s = smtpEnv();
+  return Boolean(s.host && s.user && s.pass);
 }
 
 function createTransporter() {
+  const s = smtpEnv();
   return nodemailer.createTransport({
-    host: config.smtp.host,
-    port: config.smtp.port,
-    secure: config.smtp.port === 465,
-    auth: { user: config.smtp.user, pass: config.smtp.pass },
+    host: s.host,
+    port: s.port,
+    secure: s.port === 465,
+    auth: { user: s.user, pass: s.pass },
   });
 }
 
@@ -58,10 +81,10 @@ export async function sendMail(
 
   const transporter = createTransporter();
 
+  const s = smtpEnv();
+  const d = mailFromDisplayDefaults();
   const from =
-    opts?.fromOverride?.trim() ||
-    (config.smtp.from && config.smtp.from.trim()) ||
-    `${config.siteName} <${config.supportEmail}>`;
+    opts?.fromOverride?.trim() || (s.from ? s.from : `${d.siteName} <${d.supportEmail}>`);
 
   const attachmentPayload =
     opts?.attachments?.map((a) => ({
@@ -107,8 +130,10 @@ export async function sendMailWithAttachments(
 
   const transporter = createTransporter();
 
+  const s = smtpEnv();
+  const d = mailFromDisplayDefaults();
   const info = await transporter.sendMail({
-    from: config.smtp.from || config.supportEmail,
+    from: s.from || d.supportEmail,
     to,
     subject,
     text,
