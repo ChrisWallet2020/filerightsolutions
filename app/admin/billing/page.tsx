@@ -70,24 +70,26 @@ export default async function AdminBillingPage({
               </a>{" "}
               (<code>BILLING_QUOTE_EMAIL_FAILED</code>).
             </p>
-          ) : emailReason === "smtp_send_failed" ? (
+          ) : emailReason === "mail_send_failed" || emailReason === "smtp_send_failed" ? (
             <p className="adminNoticeBody">
-              The quote was still created. SMTP is configured, but the provider rejected this message. Check{" "}
+              The quote was still created. Graph mail is configured, but the provider rejected this message. Check{" "}
               <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>
                 Vercel logs
               </a>{" "}
-              for <code>BILLING_QUOTE_EMAIL_FAILED</code>. Common causes: wrong app password, or <code>SMTP_FROM</code>{" "}
-              not allowed for your <code>SMTP_USER</code>. You can send the payment link manually below.
+              for <code>BILLING_QUOTE_EMAIL_FAILED</code>. Common causes: wrong Graph app permission/consent, invalid
+              client secret, or <code>SMTP_FROM</code> not allowed for your <code>GRAPH_SENDER_USER</code>. You can send
+              the payment link manually below.
             </p>
-          ) : emailReason === "missing_smtp_env" ? (
+          ) : emailReason === "missing_mail_env" || emailReason === "missing_smtp_env" ? (
             <p className="adminNoticeBody">
-              The quote was still created. Set <code>SMTP_HOST</code>, <code>SMTP_USER</code>, and{" "}
-              <code>SMTP_PASS</code> for <strong>Production</strong> in Vercel, redeploy, then retry. See{" "}
+              The quote was still created. Set <code>GRAPH_TENANT_ID</code>, <code>GRAPH_CLIENT_ID</code>,{" "}
+              <code>GRAPH_CLIENT_SECRET</code>, and <code>GRAPH_SENDER_USER</code> for <strong>Production</strong> in
+              Vercel, redeploy, then retry. See{" "}
               <code>.env.example</code>. Copy the link below meanwhile.
             </p>
           ) : (
             <p className="adminNoticeBody">
-              The quote was still created. Configure SMTP (see <code>.env.example</code>) or send the link manually
+              The quote was still created. Configure Graph mail (see <code>.env.example</code>) or send the link manually
               below.
             </p>
           )}
@@ -98,8 +100,9 @@ export default async function AdminBillingPage({
         <div className="adminNotice adminNotice--warn" style={{ marginTop: 14 }}>
           <strong className="adminNoticeTitle">Development: email not delivered</strong>
           <p className="adminNoticeBody">
-            SMTP is not configured, so the message was only logged on the server (see terminal). The quote was still
-            created—copy the payment link below or set <code>SMTP_*</code> in <code>.env</code> to send real mail.
+            Graph mail is not configured, so the message was only logged on the server (see terminal). The quote was
+            still created—copy the payment link below or set <code>GRAPH_*</code> in <code>.env</code> to send real
+            mail.
           </p>
         </div>
       ) : null}

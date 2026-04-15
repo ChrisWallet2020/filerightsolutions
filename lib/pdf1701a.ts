@@ -436,6 +436,260 @@ function drawTopQuestionRow(page: PDFPage, font: PDFFont, fontBold: PDFFont, pay
   return yStart - h - 12;
 }
 
+function drawLabeledInput(
+  page: PDFPage,
+  font: PDFFont,
+  fontBold: PDFFont,
+  opts: { x: number; y: number; w: number; h?: number; label: string; value: string }
+) {
+  const h = opts.h ?? 18;
+  page.drawText(opts.label, { x: opts.x, y: opts.y + h + 4, size: 8.2, font: fontBold });
+  page.drawRectangle({
+    x: opts.x,
+    y: opts.y,
+    width: opts.w,
+    height: h,
+    borderColor: GRID,
+    borderWidth: 0.7,
+    color: rgb(1, 1, 1),
+  });
+  page.drawText(opts.value || "", { x: opts.x + 6, y: opts.y + 6, size: 8.5, font });
+}
+
+function drawOptionRow(
+  page: PDFPage,
+  font: PDFFont,
+  fontBold: PDFFont,
+  opts: { x: number; y: number; label: string; options: { text: string; selected: boolean }[] }
+) {
+  page.drawText(opts.label, { x: opts.x, y: opts.y, size: 8.2, font: fontBold });
+  let xx = opts.x;
+  for (const op of opts.options) {
+    const token = op.selected ? "(x)" : "( )";
+    const txt = `${token} ${op.text}`;
+    page.drawText(txt, { x: xx, y: opts.y - 14, size: 8.4, font });
+    xx += Math.max(95, font.widthOfTextAtSize(txt, 8.4) + 20);
+  }
+}
+
+function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, payload: AnyObj, yStart: number): number {
+  let y = yStart;
+
+  y = drawSectionBand(page, fontBold, "PART I - BACKGROUND INFORMATION ON TAXPAYER/FILER", y);
+  const left = M;
+  const rightCol = 385;
+  const fullW = PAGE_W - 2 * M;
+
+  // Row: 4/5/6
+  page.drawText("4 Taxpayer Identification Number (TIN)", { x: left, y, size: 8.2, font: fontBold });
+  const tinY = y - 20;
+  const tinSegs = [str(payload.tin1), str(payload.tin2), str(payload.tin3), str(payload.tin4)];
+  let tx = left;
+  for (let i = 0; i < 4; i++) {
+    drawLabeledInput(page, font, fontBold, { x: tx, y: tinY, w: i === 3 ? 44 : 48, h: 18, label: "", value: tinSegs[i] });
+    tx += i === 3 ? 50 : 54;
+    if (i < 3) page.drawText("-", { x: tx - 5, y: tinY + 6, size: 8.8, font });
+  }
+  drawLabeledInput(page, font, fontBold, { x: 190, y: tinY, w: 72, h: 18, label: "5 RDO Code", value: str(payload.rdo) });
+  drawOptionRow(page, font, fontBold, {
+    x: rightCol,
+    y,
+    label: "6 Taxpayer Type",
+    options: [
+      { text: "Single Proprietor", selected: String(payload.taxpayerType) === "SINGLE_PROP" },
+      { text: "Professional", selected: String(payload.taxpayerType) === "PROFESSIONAL" },
+    ],
+  });
+  y = tinY - 28;
+
+  // Row: 7 ATC options (fixed two-column geometry for stable wrapping/alignment)
+  const atcValue = atcLabel(payload.atc);
+  page.drawText("7 Alphanumeric Tax Code (ATC)", { x: left, y: y + 12, size: 8.2, font: fontBold });
+  const atcOptions = [
+    "II012 Business Income-Graduated IT Rates",
+    "II014 Income from Profession-Graduated IT Rates",
+    "II015 Business Income-8% IT Rate",
+    "II017 Income from Profession-8% IT Rate",
+  ];
+  const atcBoxX = left + 128;
+  const atcBoxY = y - 12;
+  const atcBoxW = fullW - 128;
+  const atcBoxH = 34;
+  const atcColW = Math.floor((atcBoxW - 12) / 2);
+  const atcRowTopY = atcBoxY + atcBoxH - 11;
+  const atcLineGap = 8.2;
+  const wrapAtc = (text: string, maxWidth: number): string[] => {
+    const words = text.split(/\s+/);
+    const out: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (font.widthOfTextAtSize(next, 7.7) <= maxWidth) {
+        cur = next;
+      } else {
+        if (cur) out.push(cur);
+        cur = w;
+      }
+    }
+    if (cur) out.push(cur);
+    return out.length ? out.slice(0, 2) : [""];
+  };
+
+  page.drawRectangle({
+    x: atcBoxX,
+    y: atcBoxY,
+    width: atcBoxW,
+    height: atcBoxH,
+    borderColor: GRID,
+    borderWidth: 0.6,
+    color: rgb(1, 1, 1),
+  });
+  page.drawLine({
+    start: { x: atcBoxX + atcColW + 6, y: atcBoxY + atcBoxH },
+    end: { x: atcBoxX + atcColW + 6, y: atcBoxY },
+    color: GRID,
+    thickness: 0.5,
+  });
+  page.drawLine({
+    start: { x: atcBoxX, y: atcBoxY + atcBoxH / 2 },
+    end: { x: atcBoxX + atcBoxW, y: atcBoxY + atcBoxH / 2 },
+    color: GRID,
+    thickness: 0.5,
+  });
+
+  for (let i = 0; i < atcOptions.length; i++) {
+    const selected = atcOptions[i] === atcValue || (i === 3 && atcValue.includes("II017"));
+    const col = i < 2 ? 0 : 1;
+    const row = i % 2;
+    const cellX = atcBoxX + 6 + col * (atcColW + 6);
+    const cellY = atcRowTopY - row * (atcBoxH / 2);
+    const lines = wrapAtc(`${selected ? "(x)" : "( )"} ${atcOptions[i]}`, atcColW - 6);
+    for (let li = 0; li < lines.length; li++) {
+      page.drawText(lines[li], { x: cellX, y: cellY - li * atcLineGap, size: 7.7, font });
+    }
+  }
+  y -= 40;
+
+  drawLabeledInput(page, font, fontBold, {
+    x: left,
+    y: y - 14,
+    w: fullW,
+    label: "8 Taxpayer's Name (Last Name, First Name, Middle Name)",
+    value: derivedTaxpayerName(payload),
+  });
+  y -= 38;
+
+  drawLabeledInput(page, font, fontBold, { x: left, y: y - 14, w: 300, label: "9 Registered Address", value: str(payload.address) });
+  drawLabeledInput(page, font, fontBold, { x: 310, y: y - 14, w: 90, label: "9A Zip Code", value: str(payload.zip) });
+  y -= 38;
+
+  drawLabeledInput(page, font, fontBold, { x: left, y: y - 14, w: 130, label: "10 Date of Birth (MM/DD/YYYY)", value: str(payload.dob) });
+  drawLabeledInput(page, font, fontBold, { x: 285, y: y - 14, w: 280, label: "11 Email Address", value: str(payload.email) });
+  y -= 38;
+
+  drawLabeledInput(page, font, fontBold, { x: left, y: y - 14, w: 170, label: "12 Citizenship", value: str(payload.citizenship) });
+  drawOptionRow(page, font, fontBold, {
+    x: 190,
+    y: y + 4,
+    label: "13 Claiming Foreign Tax Credits?",
+    options: [
+      { text: "Yes", selected: String(payload.foreignTaxCredits) === "YES" },
+      { text: "No", selected: String(payload.foreignTaxCredits) === "NO" },
+    ],
+  });
+  drawLabeledInput(page, font, fontBold, { x: 385, y: y - 14, w: 180, label: "14 Foreign Tax Number, if applicable", value: str(payload.foreignTaxNumber) });
+  y -= 38;
+
+  drawLabeledInput(page, font, fontBold, {
+    x: left,
+    y: y - 14,
+    w: fullW,
+    label: "15 Contact Number (Landline / Cellphone)",
+    value: str(payload.contactNumber),
+  });
+  y -= 40;
+
+  // Row: 16/17/18 with fixed-width columns for exact horizontal alignment.
+  const statusTopY = y + 2;
+  const gap = 8;
+  const c16w = 208;
+  const c17w = 170;
+  const c18w = fullW - c16w - c17w - gap * 2;
+  const c16x = left;
+  const c17x = c16x + c16w + gap;
+  const c18x = c17x + c17w + gap;
+
+  const drawFixedChoices = (
+    x: number,
+    colW: number,
+    label: string,
+    options: { text: string; selected: boolean }[],
+    optionStep: number
+  ) => {
+    page.drawText(label, { x, y: statusTopY, size: 8.2, font: fontBold });
+    let ox = x;
+    const oy = statusTopY - 14;
+    for (const op of options) {
+      const txt = `${op.selected ? "(x)" : "( )"} ${op.text}`;
+      page.drawText(txt, { x: ox, y: oy, size: 7.9, font });
+      ox += optionStep;
+      if (ox > x + colW - 30) break;
+    }
+  };
+
+  drawFixedChoices(
+    c16x,
+    c16w,
+    "16 Civil Status",
+    [
+      { text: "Single", selected: String(payload.civilStatus) === "SINGLE" },
+      { text: "Married", selected: String(payload.civilStatus) === "MARRIED" },
+      { text: "Legal Sep.", selected: String(payload.civilStatus) === "LEGAL_SEP" },
+      { text: "Widow/er", selected: String(payload.civilStatus) === "WIDOW" },
+    ],
+    52
+  );
+  drawFixedChoices(
+    c17x,
+    c17w,
+    "17 If married, spouse has income?",
+    [
+      { text: "Yes", selected: String(payload.spouseHasIncome) === "YES" },
+      { text: "No", selected: String(payload.spouseHasIncome) === "NO" },
+    ],
+    58
+  );
+  drawFixedChoices(
+    c18x,
+    c18w,
+    "18 Filing Status",
+    [
+      { text: "Joint", selected: String(payload.filingStatus) === "JOINT" },
+      { text: "Separate", selected: String(payload.filingStatus) === "SEPARATE" },
+    ],
+    64
+  );
+  y -= 36;
+
+  page.drawText("19 Tax Rate", { x: left, y: y + 10, size: 8.2, font: fontBold });
+  const rateLabel = taxRateLabel(payload.taxRateMethod);
+  page.drawText(`${rateLabel.includes("Graduated") ? "(x)" : "( )"} Graduated Rates with OSD as method of deduction`, {
+    x: left + 6,
+    y: y - 4,
+    size: 8.2,
+    font,
+  });
+  page.drawText(`${rateLabel.includes("8%") ? "(x)" : "( )"} 8% in lieu of Graduated Rates under Sec. 24(A) & Percentage Tax under Sec. 116 of the NIRC, as amended`, {
+    x: left + 6,
+    y: y - 16,
+    size: 8.2,
+    font,
+  });
+  y -= 30;
+
+  return y;
+}
+
 function table2Col(
   page: PDFPage,
   font: PDFFont,
@@ -503,41 +757,8 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
   y = drawFormHeader(p1, font, fontBold, 1, y);
   y = drawResubmitNotice(p1, font, y, options?.submit1701aCount);
   y = drawTopQuestionRow(p1, font, fontBold, payload, y);
-  y = drawSectionBand(p1, fontBold, "PART I — BACKGROUND INFORMATION ON TAXPAYER/FILER", y);
-  y = drawPart1FormLikeRows(
-    p1,
-    font,
-    fontBold,
-    [
-      { no: "4", label: "Taxpayer Identification Number (TIN)", value: tin(payload) },
-      { no: "5", label: "RDO Code", value: str(payload.rdo) },
-      { no: "6", label: "Taxpayer Type", value: taxpayerTypeLabel(payload.taxpayerType) },
-      { no: "7", label: "Alphanumeric Tax Code (ATC)", value: atcLabel(payload.atc) },
-      { no: "8", label: "Taxpayer's Name (Last Name, First Name, Middle Name)", value: derivedTaxpayerName(payload) },
-      { no: "9", label: "Registered Address", value: str(payload.address) },
-      { no: "9A", label: "Zip Code", value: str(payload.zip) },
-      { no: "10", label: "Date of Birth (MM/DD/YYYY)", value: str(payload.dob) },
-      { no: "11", label: "Email Address", value: emailItem11 },
-      { no: "12", label: "Citizenship", value: str(payload.citizenship) },
-      { no: "13", label: "Claiming Foreign Tax Credits?", value: yn(payload.foreignTaxCredits) },
-      { no: "14", label: "Foreign Tax Number, if applicable", value: str(payload.foreignTaxNumber) },
-      { no: "15", label: "Contact Number (Landline / Cellphone)", value: str(payload.contactNumber) },
-      { no: "16", label: "Civil Status", value: civilLabel(payload.civilStatus) },
-      { no: "17", label: "If married, spouse has income?", value: yn(payload.spouseHasIncome) },
-      {
-        no: "18",
-        label: "Filing Status",
-        value:
-          str(payload.filingStatus) === "JOINT"
-            ? "Joint Filing"
-            : str(payload.filingStatus) === "SEPARATE"
-              ? "Separate Filing"
-              : str(payload.filingStatus) || "—",
-      },
-      { no: "19", label: "Tax Rate", value: taxRateLabel(payload.taxRateMethod) },
-    ],
-    y
-  );
+  const page1Payload = { ...payload, email: emailItem11 };
+  y = drawPage1UiClone(p1, font, fontBold, page1Payload, y);
 
   y -= 8;
   y = drawSectionBand(p1, fontBold, "PART II — TOTAL TAX PAYABLE", y);

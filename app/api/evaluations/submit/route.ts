@@ -124,6 +124,10 @@ function isBlockedAtc(payload: Record<string, string>): boolean {
   return atc === "II012" || atc === "II014" || atc === "II015";
 }
 
+function shouldSoftBlockSubmission(payload: Record<string, string>): boolean {
+  return isGradOsdSelected(payload) || isBlockedAtc(payload);
+}
+
 export async function POST(req: Request) {
   if (await isDeadlinePassedEnabled()) {
     return NextResponse.redirect(new URL("/evaluation-deadline-passed", req.url), 303);
@@ -144,8 +148,9 @@ export async function POST(req: Request) {
     payload[k] = typeof v === "string" ? v : "";
   });
 
-  // Business rule A (hard block): Item 19 = GRAD_OSD should never proceed.
-  if (isGradOsdSelected(payload)) {
+  // Business rule (soft block): Item 19 = GRAD_OSD OR ATC II012/II014/II015
+  // should redirect to thank-you, queue no-reduction email, and NOT create submission rows.
+  if (shouldSoftBlockSubmission(payload)) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, fullName: true },
@@ -179,57 +184,6 @@ export async function POST(req: Request) {
             ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
             userId,
           },
-        });
-      }
-    }
-    return new NextResponse(
-      "This evaluation cannot proceed under Item 19 (Graduated Rates with OSD). A follow-up email has been queued for 9:00 AM Philippine time.",
-      { status: 400 }
-    );
-  }
-
-  // Business rule B (soft block): ATC II012 / II014 / II015 should still redirect to thank-you,
-  // queue no-reduction email, and NOT create a submission row shown in admin evaluations.
-  if (isBlockedAtc(payload)) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, fullName: true },
-    });
-    const customerEmail = user?.email?.trim();
-    const customerName = user?.fullName?.trim() || "Client";
-    if (customerEmail) {
-      const pendingDraft = await prisma.evaluation.findFirst({
-        where: { userId, status: "DRAFT" },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, payloadJson: true },
-      });
-      const existingQueued = await prisma.scheduledEmail.findFirst({
-        where: {
-          type: "EVALUATION_NO_REDUCTION_UPDATE",
-          evaluationId: pendingDraft?.id ?? null,
-          userId,
-          sentAt: null,
-          failedAt: null,
-        },
-        select: { id: true },
-      });
-      if (!existingQueued) {
-        await prisma.scheduledEmail.create({
-          data: {
-            type: "EVALUATION_NO_REDUCTION_UPDATE",
-            toEmail: customerEmail,
-            subject: "Update on Your Tax Evaluation",
-            body: buildNoReductionEmailBody(customerName),
-            sendAt: nextDayAtNineAM(new Date()),
-            ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
-            userId,
-          },
-        });
-      }
-      if (pendingDraft?.id) {
-        await prisma.evaluation.update({
-          where: { id: pendingDraft.id },
-          data: { payloadJson: JSON.stringify(payload) },
         });
       }
     }

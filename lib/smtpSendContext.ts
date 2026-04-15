@@ -1,5 +1,5 @@
 /**
- * SMTP-related and billing-link values read from `process.env` at request time.
+ * Mail-related and billing-link values read from `process.env` at request time.
  * Import only from server Route Handlers — not from `lib/config` (also imported by client Header).
  */
 export function smtpSendContext() {
@@ -11,10 +11,10 @@ export function smtpSendContext() {
 
   const supportEmail = (process.env.SUPPORT_EMAIL || "support@filerightsolutions.com").trim();
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance";
-  const smtpUser = (process.env.SMTP_USER || "").trim();
+  const graphSenderUser = (process.env.GRAPH_SENDER_USER || "").trim();
   const smtpFromEnv = (process.env.SMTP_FROM || "").trim();
   const smtpBcc = (process.env.SMTP_BCC || "").trim();
-  const mailbox = smtpUser || supportEmail;
+  const mailbox = graphSenderUser || supportEmail;
 
   return {
     siteBaseUrl,
@@ -22,7 +22,7 @@ export function smtpSendContext() {
     siteName,
     smtpBcc,
     smtpFromEnv,
-    /** When SMTP_FROM is unset: From must match authenticated user for most providers. */
+    /** When SMTP_FROM is unset: From should match authenticated sender mailbox. */
     fromOverrideWhenNoSmtpFrom: `${siteName} <${mailbox}>`,
     referralFeeReductionPercent: Number(process.env.REFERRAL_FEE_REDUCTION_PERCENT || "10"),
   };

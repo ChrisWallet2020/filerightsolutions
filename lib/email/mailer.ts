@@ -31,9 +31,11 @@ function hasGraphConfig(): boolean {
 }
 
 /** After a failed send: true if credentials exist (provider likely rejected), false if env missing. */
-export function isSmtpEnvConfigured(): boolean {
+export function isMailEnvConfigured(): boolean {
   return hasGraphConfig();
 }
+/** Backward-compat alias while callsites migrate naming. */
+export const isSmtpEnvConfigured = isMailEnvConfigured;
 
 export type MailHealthStatus = {
   provider: "microsoft-graph";
@@ -206,9 +208,9 @@ async function sendViaGraphApi(
 
 export type SendMailOptions = {
   replyTo?: string;
-  /** If set, used as From instead of SMTP_FROM / support default */
+  /** If set, used as From instead of SMTP_FROM / default sender mailbox. */
   fromOverride?: string;
-  /** Comma-separated addresses allowed by nodemailer */
+  /** Comma-separated BCC addresses. */
   bcc?: string;
   attachments?: MailAttachment[];
   /** Allow auth/security emails to bypass global pause/suppression rules when required. */

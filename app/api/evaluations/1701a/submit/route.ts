@@ -87,6 +87,10 @@ function isBlockedAtc(payload: AnyObj): boolean {
   return atc === "II012" || atc === "II014" || atc === "II015";
 }
 
+function shouldSoftBlockSubmission(payload: AnyObj): boolean {
+  return isGradOsdSelected(payload) || isBlockedAtc(payload);
+}
+
 function addBusinessDays(start: Date, businessDays: number): Date {
   const d = new Date(start);
   let added = 0;
@@ -206,47 +210,9 @@ export async function POST(req: Request) {
     const finalPayload = mergeSubmitPayload(savedPayload, incomingPayload);
     const payloadJson = JSON.stringify(finalPayload);
 
-    // Business rule A (hard block): Item 19 = GRAD_OSD should never proceed.
-    if (isGradOsdSelected(finalPayload)) {
-      const customerEmail = evalRow.user?.email?.trim();
-      const customerName = evalRow.user?.fullName?.trim() || "Client";
-      if (customerEmail) {
-        const existingQueued = await prisma.scheduledEmail.findFirst({
-          where: {
-            type: "EVALUATION_NO_REDUCTION_UPDATE",
-            evaluationId: evalRow.id,
-            userId,
-            sentAt: null,
-            failedAt: null,
-          },
-          select: { id: true },
-        });
-        if (!existingQueued) {
-          await prisma.scheduledEmail.create({
-            data: {
-              type: "EVALUATION_NO_REDUCTION_UPDATE",
-              toEmail: customerEmail,
-              subject: "Update on Your Tax Evaluation",
-              body: buildNoReductionEmailBody(customerName),
-              sendAt: nextDayAtNineAM(new Date()),
-              evaluationId: evalRow.id,
-              userId,
-            },
-          });
-        }
-      }
-      return NextResponse.json(
-        {
-          error:
-            "This evaluation cannot proceed under Item 19 (Graduated Rates with OSD). A follow-up email has been queued for 9:00 AM Philippine time.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Business rule B (soft block): ATC II012 / II014 / II015 should redirect to thank-you,
-    // queue no-reduction email, and NOT create a submission row shown in admin evaluations.
-    if (isBlockedAtc(finalPayload)) {
+    // Business rule (soft block): Item 19 = GRAD_OSD OR ATC II012/II014/II015
+    // should redirect to thank-you, queue no-reduction email, and NOT create submission rows.
+    if (shouldSoftBlockSubmission(finalPayload)) {
       const customerEmail = evalRow.user?.email?.trim();
       const customerName = evalRow.user?.fullName?.trim() || "Client";
       if (customerEmail) {
