@@ -5,6 +5,7 @@ import { config } from "@/lib/config";
 import { getAuthedUserId } from "@/lib/auth";
 import { ORDER_STATUS } from "@/lib/constants";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
+import { clientPaymentNoticePath, paymentAcknowledged } from "@/lib/clientPaymentFlow";
 import { PaymentQuoteClient } from "./PaymentQuoteClient";
 import { PaymentSignInGate } from "./PaymentSignInGate";
 
@@ -23,9 +24,7 @@ export default async function AccountPaymentPage({
   const token = typeof qRaw === "string" ? qRaw.trim() : "";
 
   const userId = getAuthedUserId();
-  const nextPath = token
-    ? `/account/payment?q=${encodeURIComponent(token)}`
-    : "/account/payment";
+  const nextPath = token ? clientPaymentNoticePath(token) : "/account/payment";
 
   if (!userId) {
     let quoteTeaser:
@@ -55,6 +54,10 @@ export default async function AccountPaymentPage({
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     redirect(`/api/auth/prepare-login?next=${encodeURIComponent(nextPath)}`);
+  }
+
+  if (token && !paymentAcknowledged(searchParams)) {
+    redirect(clientPaymentNoticePath(token));
   }
 
   if (!token) {

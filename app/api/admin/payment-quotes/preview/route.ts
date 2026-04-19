@@ -11,6 +11,7 @@ import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 import { getAutoBillingBaseAmountForUser } from "@/lib/admin/billingAutoFee";
+import { clientPaymentNoticePath } from "@/lib/clientPaymentFlow";
 
 const Schema = z.object({
   userEmail: z.string().email(),
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
 
   const totals = computeQuotedPaymentTotals(baseAmountPhp, confirmedCredits);
   const baseUrl = String(config.baseUrl).replace(/\/$/, "");
-  const payUrl = `${baseUrl}/account/payment?q=PREVIEW_TOKEN`;
+  const payUrl = `${baseUrl}${clientPaymentNoticePath("PREVIEW_TOKEN")}`;
 
   const built = buildBillingQuoteEmail({
     clientFullName: user.fullName.trim() || "Client",

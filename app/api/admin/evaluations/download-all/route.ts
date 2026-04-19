@@ -12,6 +12,7 @@ import {
   isProcessor2EvalPdfDownloadCurrent,
 } from "@/lib/admin/adminEvalPdfDownload";
 import { getProcessor1Credentials, getProcessor2Credentials } from "@/lib/siteSettings";
+import { bufferAsResponseBody } from "@/lib/nextResponseBody";
 
 export const dynamic = "force-dynamic";
 
@@ -123,7 +124,7 @@ export async function GET(req: Request) {
     .format(downloadedAt)
     .replace(/[ :]/g, "-");
 
-  return new NextResponse(zipBytes, {
+  return new NextResponse(bufferAsResponseBody(zipBytes), {
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="evaluations_pending_oldest_${updatedRows.length}_${stamp}.zip"`,

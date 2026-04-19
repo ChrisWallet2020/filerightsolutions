@@ -5,7 +5,7 @@ export const LOGIN_RETURN_TO_COOKIE = "login_return_to";
 
 /**
  * Allow only same-site relative paths after login (mitigate open redirects).
- * Accepts paths like /account/payment or /account/payment?q=token.
+ * Accepts paths like /account/payment, /account/payment/notice?q=token, etc.
  */
 export function safePostLoginPath(next: string | null | undefined): string | null {
   if (next == null) return null;

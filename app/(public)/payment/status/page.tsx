@@ -3,6 +3,7 @@ import { MetaPurchaseConversion } from "@/components/analytics/MetaPurchaseConve
 import { getAuthedUserId } from "@/lib/auth";
 import { ORDER_STATUS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
+import { clientPaymentCheckoutPath } from "@/lib/clientPaymentFlow";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function PaymentStatusPage({
       };
     }
     if (userId && order?.sourcedFromQuote?.userId === userId) {
-      quotePaymentHref = `/account/payment?q=${encodeURIComponent(order.sourcedFromQuote.token)}`;
+      quotePaymentHref = clientPaymentCheckoutPath(order.sourcedFromQuote.token);
     }
   }
 

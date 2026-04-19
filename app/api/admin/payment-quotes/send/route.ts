@@ -12,6 +12,7 @@ import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { isMailEnvConfigured, sendMail } from "@/lib/email/mailer";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
 import { getAutoBillingBaseAmountForUser } from "@/lib/admin/billingAutoFee";
+import { clientPaymentNoticePath } from "@/lib/clientPaymentFlow";
 import { smtpSendContext } from "@/lib/smtpSendContext";
 
 /** Mail transport errors often put provider reply text on `response`, not only `message`. */
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
 
   const totals = computeQuotedPaymentTotals(baseAmountPhp, confirmedCredits);
   const mailCtx = smtpSendContext();
-  const payUrl = `${mailCtx.siteBaseUrl}/account/payment?q=${encodeURIComponent(token)}`;
+  const payUrl = `${mailCtx.siteBaseUrl}${clientPaymentNoticePath(token)}`;
 
   const { subject, textBody, htmlBody, attachments } = buildBillingQuoteEmail({
     clientFullName: user.fullName.trim() || "Client",

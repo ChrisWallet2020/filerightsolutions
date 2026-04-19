@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthed, isProcessor1Authed, isProcessor2Authed } from "@/lib/auth";
 import { buildSuggestedFilename, readEvaluationPdfBytes } from "@/lib/admin/adminEvalPdfFile";
+import { bufferAsResponseBody } from "@/lib/nextResponseBody";
 import { getProcessor1Credentials, getProcessor2Credentials } from "@/lib/siteSettings";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       },
     });
     const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
-    return new NextResponse(pdf.bytes, {
+    return new NextResponse(bufferAsResponseBody(pdf.bytes), {
       headers: {
         "Content-Type": pdf.mimeType,
         "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,

@@ -98,15 +98,25 @@ const footerLink: CSSProperties = {
   textDecoration: "none",
 };
 
-export function PaymentSignInGate({ nextPath, quoteTeaser }: { nextPath: string; quoteTeaser: Teaser }) {
+export function PaymentSignInGate({
+  nextPath,
+  quoteTeaser,
+  introLead,
+}: {
+  nextPath: string;
+  quoteTeaser: Teaser;
+  /** When set, replaces the default sign-in explanation (e.g. notice step before payment). */
+  introLead?: string;
+}) {
   const leadText =
     quoteTeaser.ok && quoteTeaser.cancelled
       ? "This quote is no longer active. You can still sign in to manage your account."
       : quoteTeaser.ok && quoteTeaser.expired
       ? "This payment link has expired. Sign in to use your account, or contact us for a new link."
-      : quoteTeaser.ok
-      ? "Sign in with the email address we sent this quote to. After sign-in, you’ll see your full payment summary and can pay securely."
-      : "Sign in with the account that received the quote. If you opened this link by mistake, you can sign in and paste your quote code on the payment page.";
+      : introLead?.trim() ||
+        (quoteTeaser.ok
+          ? "Sign in with the email address we sent this quote to. After sign-in, you’ll see your full payment summary and can pay securely."
+          : "Sign in with the account that received the quote. If you opened this link by mistake, you can sign in and paste your quote code on the payment page.");
 
   const showAmountPreview = quoteTeaser.ok && !quoteTeaser.cancelled && !quoteTeaser.expired;
 
