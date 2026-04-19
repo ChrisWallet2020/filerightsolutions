@@ -4,7 +4,7 @@ import { getProcessor1Credentials, getProcessor2Credentials } from "@/lib/siteSe
 
 export default async function AdminIndexPage() {
   if (!isAdminAuthed()) {
-    redirect("/admin/login");
+    redirect("/admin_dashboard/login");
   }
   const processor1 = await getProcessor1Credentials();
   const processor2 = await getProcessor2Credentials();

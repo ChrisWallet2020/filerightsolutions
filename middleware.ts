@@ -67,34 +67,28 @@ async function hasValidProcessor1Cookie(req: NextRequest): Promise<boolean> {
   return parsed.signature === expected;
 }
 
-function adminDashboardToInternal(pathname: string): string | null {
-  if (pathname === "/admin_dashboard" || pathname.startsWith("/admin_dashboard/")) {
-    return "/admin" + pathname.slice("/admin_dashboard".length);
+/** Legacy `/admin` URLs → canonical `/admin_dashboard` (App Router pages live under the latter). */
+function redirectLegacyAdminToDashboard(req: NextRequest): NextResponse | null {
+  const { pathname, search } = req.nextUrl;
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    const u = req.nextUrl.clone();
+    u.pathname = "/admin_dashboard" + pathname.slice("/admin".length);
+    u.search = search;
+    return NextResponse.redirect(u);
   }
   return null;
 }
 
 export async function middleware(req: NextRequest) {
+  const legacy = redirectLegacyAdminToDashboard(req);
+  if (legacy) return legacy;
+
   const { pathname } = req.nextUrl;
 
-  // App routes live under /admin; public URL is /admin_dashboard (next.config redirects).
-  // Relying on next.config rewrites alone can 404 on some hosts; rewrite at the edge too.
-  const internalAdmin = adminDashboardToInternal(pathname);
-  if (internalAdmin) {
-    const internalUrl = new URL(internalAdmin + req.nextUrl.search, req.url);
-    if (internalAdmin.startsWith("/admin/login")) {
-      return NextResponse.rewrite(internalUrl);
-    }
+  if (pathname.startsWith("/admin_dashboard")) {
+    if (pathname.startsWith("/admin_dashboard/login")) return NextResponse.next();
     if (!(await hasValidAdminCookie(req))) {
       return NextResponse.redirect(new URL("/admin_dashboard/login" + req.nextUrl.search, req.url));
-    }
-    return NextResponse.rewrite(internalUrl);
-  }
-
-  if (pathname.startsWith("/admin")) {
-    if (pathname.startsWith("/admin/login")) return NextResponse.next();
-    if (!(await hasValidAdminCookie(req))) {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
     }
     return NextResponse.next();
   }

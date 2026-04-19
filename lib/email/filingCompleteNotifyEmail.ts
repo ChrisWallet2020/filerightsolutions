@@ -1,3 +1,4 @@
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import {
   BILLING_EMAIL_FOOTER_TEXT,
   billingEmailFooterHtml,
@@ -69,7 +70,7 @@ export function buildFilingCompleteNotifyEmail(firstName: string): {
     billingEmailFooterHtml(),
   ].join("");
 
-  const htmlBody = wrapEmailMainHtml(inner);
+  const htmlBody = wrapEmailMainHtml(inner, clientEmailBranding());
 
   return { subject, textBody, htmlBody };
 }

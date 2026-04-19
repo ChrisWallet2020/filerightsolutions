@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const filingReference = String(form.get("filingReference") || "").trim();
   const filedByName = String(form.get("filedByName") || "").trim();
   const notes = String(form.get("notes") || "").trim();
-  const redir = new URL("/admin/filing-queue", req.url);
+  const redir = new URL("/admin_dashboard/filing-queue", req.url);
 
   if (!orderId) {
     redir.searchParams.set("taskError", "missing_order");

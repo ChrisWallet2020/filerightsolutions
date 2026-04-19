@@ -1,7 +1,12 @@
 import { config } from "@/lib/config";
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import type { MailAttachment } from "@/lib/email/mailer";
 import {
+  BILLING_EMAIL_FOOTER_TEXT,
+  billingEmailFooterHtml,
   emailParagraphHtml,
+  emailSignatureHtml,
+  emailSignatureText,
   escapeHtml,
   joinTextParagraphs,
   wrapEmailMainHtml,
@@ -84,8 +89,20 @@ export function buildBillingQuoteEmail(opts: {
     "If your taxes are negative it will be carried over as a tax credit for the next taxable year.",
     "Remember, you should only pay what is officially filed in your filed BIR Form 1701A.",
     "If anything in the evaluation needs clarification, feel free to reply to this email.",
-    "Sincerely,",
-    "Reiner",
+    emailSignatureText("Reiner"),
+    ...(clientNote?.trim() || expiresAt
+      ? [
+          [
+            clientNote?.trim() ? `Note from our office: ${clientNote.trim()}` : "",
+            expiresAt
+              ? `Payment link expires ${expiresAt.toLocaleDateString("en-PH", { dateStyle: "long" })}.`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        ]
+      : []),
+    BILLING_EMAIL_FOOTER_TEXT,
   ]);
 
   const payLinkHtml = `<a href="${escapeHtml(payUrl)}">${escapeHtml(payUrl)}</a>`;
@@ -124,11 +141,12 @@ export function buildBillingQuoteEmail(opts: {
       "<b>Remember, you should only pay what is officially filed in your filed BIR Form 1701A.</b>"
     ),
     emailParagraphHtml("If anything in the evaluation needs clarification, feel free to reply to this email."),
-    emailParagraphHtml("Sincerely,<br/>Reiner"),
+    emailSignatureHtml("Reiner"),
     extraNote,
+    billingEmailFooterHtml(),
   ].join("");
 
-  const htmlBody = wrapEmailMainHtml(innerHtml);
+  const htmlBody = wrapEmailMainHtml(innerHtml, clientEmailBranding());
 
   return { subject, textBody, htmlBody, attachments };
 }

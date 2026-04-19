@@ -5,7 +5,7 @@ import { ClientEmailerForm } from "@/components/admin/ClientEmailerForm";
 export const dynamic = "force-dynamic";
 
 export default async function AdminClientEmailerPage() {
-  if (!isAdminAuthed()) redirect("/admin/login");
+  if (!isAdminAuthed()) redirect("/admin_dashboard/login");
 
   return (
     <section className="section">

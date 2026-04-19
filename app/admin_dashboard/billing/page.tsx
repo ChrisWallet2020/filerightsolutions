@@ -9,7 +9,7 @@ export default async function AdminBillingPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   if (!isAdminAuthed()) {
-    redirect("/admin/login");
+    redirect("/admin_dashboard/login");
   }
 
   const submittedClients = await getSubmitted1701aClientOptions();

@@ -33,5 +33,5 @@ export async function POST(req: Request) {
 
   await setSalesFeesLimits(minSalesFees || null, maxSalesFees || null);
 
-  return NextResponse.redirect(new URL("/admin/evaluation-limits", req.url), 303);
+  return NextResponse.redirect(new URL("/admin_dashboard/evaluation-limits", req.url), 303);
 }

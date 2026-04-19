@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   if (!user) {
     const exists = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     const err = exists ? "evaluation_not_submitted" : "user_not_found";
-    const redir = new URL("/admin/billing", req.url);
+    const redir = new URL("/admin_dashboard/billing", req.url);
     redir.searchParams.set("quoteError", err);
     return NextResponse.redirect(redir, 303);
   }
@@ -201,7 +201,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const redir = new URL("/admin/billing", req.url);
+  const redir = new URL("/admin_dashboard/billing", req.url);
   redir.searchParams.set("newToken", token);
   redir.searchParams.set("emailed", emailSent ? "1" : "0");
   if (emailDevLog) {

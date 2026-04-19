@@ -1,3 +1,4 @@
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import {
   BILLING_EMAIL_FOOTER_TEXT,
   billingEmailFooterHtml,
@@ -66,7 +67,7 @@ export function buildPaymentReceivedTaxFilingInProgressEmail(
     billingEmailFooterHtml(),
   ].join("");
 
-  const htmlBody = wrapEmailMainHtml(inner);
+  const htmlBody = wrapEmailMainHtml(inner, clientEmailBranding());
 
   return { subject: SUBJECT, textBody, htmlBody };
 }

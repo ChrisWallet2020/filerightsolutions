@@ -6,14 +6,14 @@ import { usePathname } from "next/navigation";
 type AdminNavItem = { href: string; label: string };
 
 const NAV_ITEMS: AdminNavItem[] = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/evaluation-limits", label: "Evaluation limits" },
-  { href: "/admin/high-volume", label: "Submission controls" },
-  { href: "/admin/billing", label: "Billing" },
-  { href: "/admin/filing-queue", label: "Filing queue" },
-  { href: "/admin/client-emailer", label: "Client emailer" },
-  { href: "/admin/agents", label: "Agents" },
+  { href: "/admin_dashboard", label: "Dashboard" },
+  { href: "/admin_dashboard/orders", label: "Orders" },
+  { href: "/admin_dashboard/evaluation-limits", label: "Evaluation limits" },
+  { href: "/admin_dashboard/high-volume", label: "Submission controls" },
+  { href: "/admin_dashboard/billing", label: "Billing" },
+  { href: "/admin_dashboard/filing-queue", label: "Filing queue" },
+  { href: "/admin_dashboard/client-emailer", label: "Client emailer" },
+  { href: "/admin_dashboard/agents", label: "Agents" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

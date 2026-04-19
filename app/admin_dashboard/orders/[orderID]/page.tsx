@@ -12,7 +12,7 @@ type OrderDetailRow = Prisma.OrderGetPayload<{
 }>;
 
 export default async function OrderDetail({ params }: { params: { orderID: string } }) {
-  if (!isAdminAuthed()) redirect("/admin/login");
+  if (!isAdminAuthed()) redirect("/admin_dashboard/login");
 
   let order: OrderDetailRow | null = null;
   try {
@@ -68,7 +68,7 @@ export default async function OrderDetail({ params }: { params: { orderID: strin
             <div className="muted">Filing reference: {order.filingTask.filingReference}</div>
           ) : null}
           <div style={{ marginTop: 10 }}>
-            <a className="link" href="/admin/filing-queue">
+            <a className="link" href="/admin_dashboard/filing-queue">
               Open filing queue
             </a>
           </div>

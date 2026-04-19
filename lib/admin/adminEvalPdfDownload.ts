@@ -15,7 +15,7 @@ function isEvalPdfDownloadCurrent(
   return fields.downloadedSubmitOrdinal === count;
 }
 
-/** Admin GET /admin/evaluations/[id]/pdf */
+/** Admin GET /admin_dashboard/evaluations/[id]/pdf */
 export function isAdminEvalPdfDownloadCurrent(sub: {
   adminPdfDownloadedAt: Date | null;
   adminPdfDownloadedSubmitOrdinal: number | null;

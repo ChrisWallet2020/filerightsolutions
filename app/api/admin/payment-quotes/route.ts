@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     expiresAt: null,
   });
 
-  const redir = new URL("/admin/billing", req.url);
+  const redir = new URL("/admin_dashboard/billing", req.url);
   redir.searchParams.set("newToken", token);
   return NextResponse.redirect(redir, 303);
 }

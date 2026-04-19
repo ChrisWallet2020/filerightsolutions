@@ -5,7 +5,7 @@ import { isAdminAuthed } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export default async function OrdersPage() {
-  if (!isAdminAuthed()) redirect("/admin/login");
+  if (!isAdminAuthed()) redirect("/admin_dashboard/login");
 
   let orders: Array<{
     id: string;
@@ -41,7 +41,7 @@ export default async function OrdersPage() {
         </div>
         {orders.map((o) => (
           <div className="tr" key={o.id} style={{ gridTemplateColumns: "130px 120px 120px 1fr 1fr 80px 110px" }}>
-            <div><Link className="link" href={`/admin/orders/${o.orderId}`}>{o.orderId}</Link></div>
+            <div><Link className="link" href={`/admin_dashboard/orders/${o.orderId}`}>{o.orderId}</Link></div>
             <div><StatusPill status={o.status} /></div>
             <div className="muted small">{o.filingTask?.status || "—"}</div>
             <div>{o.customerName}<div className="muted small">{o.customerEmail}</div></div>

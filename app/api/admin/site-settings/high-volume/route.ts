@@ -33,5 +33,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, enabled });
   }
 
-  return NextResponse.redirect(new URL("/admin/high-volume", req.url), 303);
+  return NextResponse.redirect(new URL("/admin_dashboard/high-volume", req.url), 303);
 }

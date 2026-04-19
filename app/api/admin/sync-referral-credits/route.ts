@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const n = await syncReferralCreditsFromSubmittedEvaluations();
   const referer = req.headers.get("referer") || "";
-  let dest = "/admin/evaluations";
+  let dest = "/admin_dashboard/evaluations";
   if (referer.includes("/processor1_dashboard")) dest = "/processor1_dashboard/evaluations";
   else if (referer.includes("/processor2_dashboard")) dest = "/processor2_dashboard/evaluations";
 

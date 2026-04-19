@@ -27,7 +27,7 @@ export default async function AdminFilingQueuePage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  if (!isAdminAuthed()) redirect("/admin/login");
+  if (!isAdminAuthed()) redirect("/admin_dashboard/login");
 
   const filter = (typeof searchParams?.filter === "string" ? searchParams.filter : "all_open") as QueueFilter;
   const taskError = typeof searchParams?.taskError === "string" ? searchParams.taskError : "";
@@ -127,12 +127,12 @@ export default async function AdminFilingQueuePage({
 
         <div className="adminCard">
           <div className="adminActions" style={{ marginBottom: 10 }}>
-            <FilterLink active={filter === "all_open"} href="/admin/filing-queue?filter=all_open" label="All open" />
-            <FilterLink active={filter === "ready"} href="/admin/filing-queue?filter=ready" label="Ready" />
-            <FilterLink active={filter === "in_progress"} href="/admin/filing-queue?filter=in_progress" label="In progress" />
-            <FilterLink active={filter === "on_hold"} href="/admin/filing-queue?filter=on_hold" label="On hold" />
-            <FilterLink active={filter === "overdue"} href="/admin/filing-queue?filter=overdue" label="Overdue" />
-            <FilterLink active={filter === "filed"} href="/admin/filing-queue?filter=filed" label="Filed / QC done" />
+            <FilterLink active={filter === "all_open"} href="/admin_dashboard/filing-queue?filter=all_open" label="All open" />
+            <FilterLink active={filter === "ready"} href="/admin_dashboard/filing-queue?filter=ready" label="Ready" />
+            <FilterLink active={filter === "in_progress"} href="/admin_dashboard/filing-queue?filter=in_progress" label="In progress" />
+            <FilterLink active={filter === "on_hold"} href="/admin_dashboard/filing-queue?filter=on_hold" label="On hold" />
+            <FilterLink active={filter === "overdue"} href="/admin_dashboard/filing-queue?filter=overdue" label="Overdue" />
+            <FilterLink active={filter === "filed"} href="/admin_dashboard/filing-queue?filter=filed" label="Filed / QC done" />
           </div>
 
           <div style={{ overflowX: "auto" }}>
@@ -163,7 +163,7 @@ export default async function AdminFilingQueuePage({
                         <td style={{ padding: "10px 8px" }}>
                           <div style={{ fontWeight: 700 }}>{t.order.orderId}</div>
                           <div className="muted small">{t.order.status}</div>
-                          <Link className="link" href={`/admin/orders/${t.order.orderId}`}>
+                          <Link className="link" href={`/admin_dashboard/orders/${t.order.orderId}`}>
                             View order
                           </Link>
                         </td>

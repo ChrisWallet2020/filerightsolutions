@@ -30,7 +30,7 @@ function attachmentToText(content: Buffer | Uint8Array): string {
 }
 
 function redirectBillingError(req: Request, code: string) {
-  const url = new URL("/admin/billing", req.url);
+  const url = new URL("/admin_dashboard/billing", req.url);
   url.searchParams.set("previewError", code);
   return NextResponse.redirect(url, 303);
 }
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   </style>
 </head>
 <body>
-  <a class="backBtn" href="/admin/billing">← Back to Billing</a>
+  <a class="backBtn" href="/admin_dashboard/billing">← Back to Billing</a>
   <span class="muted" style="margin-left:10px;">Tip: you can close this tab — the form stays open in the other tab.</span>
   <h1>Billing Email Preview</h1>
   <div class="muted topline">No email sent. No quote created. This is a content preview only.</div>

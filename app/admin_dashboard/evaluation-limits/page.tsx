@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSalesFeesLimits } from "@/lib/siteSettings";
 
 export default async function AdminEvaluationLimitsPage() {
-  if (!isAdminAuthed()) redirect("/admin/login");
+  if (!isAdminAuthed()) redirect("/admin_dashboard/login");
 
   const limits = await getSalesFeesLimits();
 

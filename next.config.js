@@ -56,18 +56,6 @@ const nextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return [
-      {
-        source: "/admin_dashboard",
-        destination: "/admin",
-      },
-      {
-        source: "/admin_dashboard/:path*",
-        destination: "/admin/:path*",
-      },
-    ];
-  },
 };
 
 module.exports = nextConfig;

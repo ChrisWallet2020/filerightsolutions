@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { config } from "@/lib/config";
 import { customerHasPaidService, processAgentReferralPipeline } from "@/lib/agentReferralsSync";
 import { sendMail } from "@/lib/email/mailer";
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import {
   BILLING_EMAIL_FOOTER_TEXT,
   billingEmailFooterHtml,
@@ -163,7 +164,8 @@ export async function POST(req: Request) {
           `<span style="color:#64748b;font-size:13px;">If you did not create this account, you may safely ignore this message.</span>`
         ),
         billingEmailFooterHtml(),
-      ].join("")
+      ].join(""),
+      clientEmailBranding()
     );
 
     const next = new URL("/register/email-sent", req.url);

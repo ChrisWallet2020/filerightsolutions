@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/email/mailer";
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import {
   BILLING_EMAIL_FOOTER_TEXT,
   billingEmailFooterHtml,
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
       const htmlInner = shouldUseBillingFooter
         ? `${textToEmailHtmlParagraphs(e.body)}${billingEmailFooterHtml()}`
         : textToEmailHtmlParagraphs(e.body);
-      const htmlBody = wrapEmailMainHtml(htmlInner);
+      const htmlBody = wrapEmailMainHtml(htmlInner, clientEmailBranding());
       const idempotencyKey = e.idempotencyKey || `scheduled:${e.id}`;
 
       const result = await sendMail(e.toEmail, e.subject, textBody, htmlBody);

@@ -60,5 +60,5 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.redirect(new URL(`/admin/orders/${orderId}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/admin_dashboard/orders/${orderId}`, req.url), 303);
 }

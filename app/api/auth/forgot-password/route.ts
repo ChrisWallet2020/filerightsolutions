@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { sendMail } from "@/lib/email/mailer";
 import { config } from "@/lib/config";
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import {
   emailParagraphHtml,
   emailSignatureHtml,
@@ -61,7 +62,8 @@ export async function POST(req: Request) {
           "If you did not request a reset, you can ignore this email; your password will stay the same."
         ),
         emailSignatureHtml("Reiner"),
-      ].join("")
+      ].join(""),
+      clientEmailBranding()
     );
 
     await sendMail(user.email, "Reset your password", textBody, htmlBody);

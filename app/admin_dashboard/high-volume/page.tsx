@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
 
 export default async function AdminHighVolumePage() {
-  if (!isAdminAuthed()) redirect("/admin/login");
+  if (!isAdminAuthed()) redirect("/admin_dashboard/login");
 
   const enabled = await isHighVolumeEnabled();
   const deadlinePassedEnabled = await isDeadlinePassedEnabled();

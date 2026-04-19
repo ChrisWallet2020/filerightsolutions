@@ -62,12 +62,51 @@ export function billingEmailFooterHtml(): string {
 </div>`;
 }
 
+/** Optional logo + product line above the salutation (pass from `config` on the server). */
+export type WrapEmailBrandingOpts = {
+  baseUrl: string;
+  siteName: string;
+  brandName?: string;
+};
+
+/** Logo uses `{baseUrl}/icon.png` when baseUrl is absolute http(s). */
+export function emailBrandedHeaderHtml(opts: WrapEmailBrandingOpts): string {
+  const base = (opts.baseUrl || "").trim().replace(/\/+$/, "");
+  const site = escapeHtml(opts.siteName.trim());
+  const alt = escapeHtml((opts.brandName || opts.siteName).trim());
+  const showImg = /^https?:\/\//i.test(base);
+  const imgSrc = showImg ? `${base}/icon.png` : "";
+  const logoCell = showImg
+    ? `<td width="56" valign="middle" style="padding:0 14px 0 0;margin:0;">
+        <img src="${imgSrc}" width="48" height="48" alt="${alt}" style="display:block;width:48px;height:48px;border-radius:10px;border:1px solid #e2e8f0;background:#1e40af;" />
+      </td>`
+    : "";
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 22px;padding:0 0 20px;border-bottom:1px solid #e2e8f0;">
+  <tr>
+    ${logoCell}
+    <td valign="middle" style="padding:0;margin:0;">
+      <div style="${BODY_FONT}font-size:18px;font-weight:700;color:#0f172a;line-height:1.25;letter-spacing:-0.02em;">${site}</div>
+    </td>
+  </tr>
+</table>`;
+}
+
 /** Wrap main HTML so clients get consistent outer width and base font (inner should be block elements). */
-export function wrapEmailMainHtml(innerBlocks: string): string {
+export function wrapEmailMainHtml(innerBlocks: string, branding?: WrapEmailBrandingOpts | null): string {
+  const header =
+    branding?.siteName?.trim()
+      ? emailBrandedHeaderHtml({
+          baseUrl: (branding.baseUrl || "").trim(),
+          siteName: branding.siteName.trim(),
+          brandName: branding.brandName,
+        })
+      : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background:#ffffff;">
   <tr>
     <td style="padding:20px 16px 28px;${BODY_FONT}">
       <div style="max-width:560px;margin:0 auto;">
+        ${header}
         ${innerBlocks}
       </div>
     </td>

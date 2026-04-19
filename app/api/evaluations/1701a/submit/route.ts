@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getAuthedUserId } from "@/lib/auth";
 import { generate1701aPdf } from "@/lib/pdf1701a";
 import { sendMailWithAttachments } from "@/lib/email/mailer";
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import { config } from "@/lib/config";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
 import {
@@ -424,7 +425,7 @@ Account email: ${evalRow.user?.email ?? "(unknown)"}`,
               contentType: "application/pdf",
             },
           ],
-          wrapEmailMainHtml(textToEmailHtmlParagraphs(adminNotifyText))
+          wrapEmailMainHtml(textToEmailHtmlParagraphs(adminNotifyText), clientEmailBranding())
         );
       } catch (mailErr) {
         console.error("EVALUATION_SUBMIT_EMAIL_FAILED:", mailErr);

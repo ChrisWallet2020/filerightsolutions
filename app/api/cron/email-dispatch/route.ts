@@ -6,7 +6,13 @@ import { uploadRequestEmail, completionEmail } from "@/lib/email/templates";
 import { buildPaymentReceivedTaxFilingInProgressEmail } from "@/lib/email/paymentReceivedInProgressEmail";
 import { EMAIL_DELAYS } from "@/lib/email/timing";
 import { config } from "@/lib/config";
-import { joinTextParagraphs, textToEmailHtmlParagraphs, wrapEmailMainHtml, emailSignatureText } from "@/lib/email/formatting";
+import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
+import {
+  joinTextParagraphs,
+  textToEmailHtmlParagraphs,
+  wrapEmailMainHtml,
+  emailSignatureText,
+} from "@/lib/email/formatting";
 import { processAgentReferralPipeline } from "@/lib/agentReferralsSync";
 
 function hoursAgo(h: number) {
@@ -63,7 +69,7 @@ export async function POST(req: Request) {
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body), clientEmailBranding());
         const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
@@ -82,7 +88,7 @@ export async function POST(req: Request) {
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body), clientEmailBranding());
         const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
@@ -97,7 +103,7 @@ export async function POST(req: Request) {
           `We will begin our review and computation based on the documents provided. If additional information is needed, we will contact you by email.`,
           `${emailSignatureText("Reiner")}\n${config.siteName}\n${config.supportEmail}`,
         ]);
-        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(body));
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(body), clientEmailBranding());
         const r = await sendMail(e.toEmail, subject, body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
@@ -113,7 +119,7 @@ export async function POST(req: Request) {
           amountPhp: order.amountPhp,
           uploadLink
         });
-        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body));
+        const html = wrapEmailMainHtml(textToEmailHtmlParagraphs(tpl.body), clientEmailBranding());
         const r = await sendMail(e.toEmail, tpl.subject, tpl.body, html);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
