@@ -6,10 +6,16 @@ function normalizeSiteBaseUrl(): string {
   return noTrail || "http://localhost:3000";
 }
 
+/** Public display name: keep env flexible but prefer "Assistant" over "Assistance" in the product title. */
+function normalizePublicSiteName(raw: string | undefined): string {
+  const base = (raw || "").trim() || "Your Tax Filing Assistant";
+  return base.replace(/\bAssistance\b/gi, "Assistant");
+}
+
 export const config = {
   /** Legal / SEO brand (search titles use this first). */
   brandName: process.env.NEXT_PUBLIC_BRAND_NAME || "FileRight Solutions",
-  siteName: process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Your Tax Filing Assistant",
+  siteName: normalizePublicSiteName(process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME),
   supportEmail: process.env.SUPPORT_EMAIL || "support@filerightsolutions.com",
   /**
    * When true, sends a PDF copy of each 1701A submit to evaluationPdfNotifyEmail.

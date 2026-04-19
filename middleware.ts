@@ -67,8 +67,29 @@ async function hasValidProcessor1Cookie(req: NextRequest): Promise<boolean> {
   return parsed.signature === expected;
 }
 
+function adminDashboardToInternal(pathname: string): string | null {
+  if (pathname === "/admin_dashboard" || pathname.startsWith("/admin_dashboard/")) {
+    return "/admin" + pathname.slice("/admin_dashboard".length);
+  }
+  return null;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // App routes live under /admin; public URL is /admin_dashboard (next.config redirects).
+  // Relying on next.config rewrites alone can 404 on some hosts; rewrite at the edge too.
+  const internalAdmin = adminDashboardToInternal(pathname);
+  if (internalAdmin) {
+    const internalUrl = new URL(internalAdmin + req.nextUrl.search, req.url);
+    if (internalAdmin.startsWith("/admin/login")) {
+      return NextResponse.rewrite(internalUrl);
+    }
+    if (!(await hasValidAdminCookie(req))) {
+      return NextResponse.redirect(new URL("/admin_dashboard/login" + req.nextUrl.search, req.url));
+    }
+    return NextResponse.rewrite(internalUrl);
+  }
 
   if (pathname.startsWith("/admin")) {
     if (pathname.startsWith("/admin/login")) return NextResponse.next();
@@ -108,7 +129,10 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/admin",
     "/admin/:path*",
+    "/admin_dashboard",
+    "/admin_dashboard/:path*",
     "/processor1_dashboard",
     "/processor1_dashboard/:path*",
     "/processor2_dashboard",

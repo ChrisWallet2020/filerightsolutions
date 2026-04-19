@@ -97,10 +97,13 @@ export default async function AdminBillingPage({
 
       {emailDev ? (
         <div className="adminNotice adminNotice--warn" style={{ marginTop: 14, width: "100%", maxWidth: 760 }}>
-          <strong className="adminNoticeTitle">Development: email not delivered</strong>
+          <strong className="adminNoticeTitle">Email not sent (Resend not configured here)</strong>
           <p className="adminNoticeBody">
-            Resend is not configured, so the message was only logged on the server (see terminal). The quote was still
-            created—copy the payment link below or set <code>RESEND_API_KEY</code> in <code>.env</code> to send real mail.
+            This run did not have a usable <code>RESEND_API_KEY</code>, so nothing was sent to Resend—the payload was
+            logged on the server only (see your terminal). The quote was still created; copy the payment link below. For
+            real mail on your machine, add <code>RESEND_API_KEY</code> (and ideally <code>SMTP_FROM</code>) to{" "}
+            <code>.env.local</code>, then restart <code>npm run dev</code>. On Vercel, add the same variables for Preview
+            and/or Production, then redeploy.
           </p>
         </div>
       ) : null}
