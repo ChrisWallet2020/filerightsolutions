@@ -144,7 +144,6 @@ export async function POST(req: Request) {
   let usedFallbackSend = false;
   try {
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
-      replyTo: mailCtx.supportEmail,
       attachments: emailAttachments,
       ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
       ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
@@ -177,7 +176,6 @@ export async function POST(req: Request) {
           supportEmail: mailCtx.supportEmail,
         });
         const retry = await sendMail(user.email, fallback.subject, fallback.textBody, fallback.htmlBody, {
-          replyTo: mailCtx.supportEmail,
           ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
           ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
         });

@@ -2,6 +2,8 @@
  * Mail-related and billing-link values read from `process.env` at request time.
  * Import only from server Route Handlers — not from `lib/config` (also imported by client Header).
  */
+import { resolveMailReplyTo } from "@/lib/email/mailReplyTo";
+
 export function smtpSendContext() {
   const baseRaw =
     (process.env.SITE_BASE_URL || "").trim() ||
@@ -11,14 +13,15 @@ export function smtpSendContext() {
 
   const supportEmail = (process.env.SUPPORT_EMAIL || "support@filerightsolutions.com").trim();
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance";
-  const graphSenderUser = (process.env.GRAPH_SENDER_USER || "").trim();
   const smtpFromEnv = (process.env.SMTP_FROM || "").trim();
   const smtpBcc = (process.env.SMTP_BCC || "").trim();
-  const mailbox = graphSenderUser || supportEmail;
+  const mailbox = supportEmail;
 
   return {
     siteBaseUrl,
     supportEmail,
+    /** Reply-To header (same resolution as `lib/email/mailer` when send opts omit `replyTo`). */
+    replyTo: resolveMailReplyTo(),
     siteName,
     smtpBcc,
     smtpFromEnv,

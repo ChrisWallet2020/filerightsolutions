@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdminAuthed } from "@/lib/auth";
+import { isAdminAuthed, isProcessor2Authed } from "@/lib/auth";
 import { findUserForFilingCompleteNotifyByEmail } from "@/lib/admin/findUserForFilingCompleteNotify";
 import { buildFilingCompleteNotifyEmail, firstNameFromFullName } from "@/lib/email/filingCompleteNotifyEmail";
+import { getProcessor2Credentials } from "@/lib/siteSettings";
 
 const Body = z.object({
   email: z.string().email(),
 });
 
 export async function POST(req: Request) {
-  if (!isAdminAuthed()) {
+  const processor2 = await getProcessor2Credentials();
+  if (!isAdminAuthed() && !isProcessor2Authed(processor2.username)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

@@ -3,6 +3,9 @@ import { PART4_SECTIONS } from "@/lib/bir1701aPart4";
 
 type AnyObj = Record<string, unknown>;
 
+/** `processed` = business-rule PDF (admin / processor2). `verbatim` = portal field values as stored (processor1). */
+export type PdfRenderMode = "processed" | "verbatim";
+
 const PAGE_W = 612;
 const PAGE_H = 792;
 const M = 48;
@@ -48,6 +51,15 @@ function atcLabel(v: unknown): string {
   // Business rule: downloadable PDF must always show a fixed ATC display value.
   if (!str(v)) return "—";
   return 'II017 "II014 Income from Profession-Graduated IT Rates"';
+}
+
+function atcVerbatimSelectionIndex(atc: unknown): number {
+  const c = String(atc || "").trim().toUpperCase();
+  if (c === "II012") return 0;
+  if (c === "II014") return 1;
+  if (c === "II015") return 2;
+  if (c === "II017") return 3;
+  return -1;
 }
 
 function civilLabel(v: unknown): string {
@@ -106,6 +118,22 @@ function part4Money(n: number): string {
   return safe.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function amountNum(v: unknown): number {
+  const cleaned = str(v).replace(/,/g, "").replace(/PHP\s*/gi, "").trim();
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function computeTaxDueFromTaxableIncome(totalTaxable: number): number {
+  const taxable = Math.max(0, totalTaxable);
+  if (taxable <= 250_000) return 0;
+  if (taxable <= 400_000) return (taxable - 250_000) * 0.15;
+  if (taxable <= 800_000) return 22_500 + (taxable - 400_000) * 0.2;
+  if (taxable <= 2_000_000) return 102_500 + (taxable - 800_000) * 0.25;
+  if (taxable <= 8_000_000) return 402_500 + (taxable - 2_000_000) * 0.3;
+  return 2_202_500 + (taxable - 8_000_000) * 0.35;
+}
+
 function computedPart4Cell(p: AnyObj, no: number, side: "A" | "B"): string {
   // Business rule override for downloadable PDF (IV.A rows derived from IV.B inputs).
   const from47 = part4Num(p, 47, side);
@@ -128,11 +156,11 @@ function computedPart4Cell(p: AnyObj, no: number, side: "A" | "B"): string {
   if (no === 44) return part4Money(totalOther);
   if (no === 45) return part4Money(totalTaxable);
   if (no === 46) {
-    if (totalTaxable < 250_000) return "0.00";
-    // If >= 250,000, preserve submitted tax due value (no bracket recomputation here).
-    const existing = part4Cell(p, 46, side);
-    return existing || "0.00";
+    return part4Money(computeTaxDueFromTaxableIncome(totalTaxable));
   }
+  // In processed PDFs, rows 47–56 are intentionally zeroed because this block
+  // is fully recomputed into rows 36–46 by business rules.
+  if (no >= 47 && no <= 56) return part4Money(0);
   return part4Cell(p, no, side);
 }
 
@@ -146,7 +174,8 @@ function drawPart4Sections(
   fontBold: PDFFont,
   payload: AnyObj,
   sections: typeof PART4_SECTIONS,
-  yStart: number
+  yStart: number,
+  renderMode: PdfRenderMode
 ): number {
   let y = yStart;
   const noX = M;
@@ -162,9 +191,13 @@ function drawPart4Sections(
     page.drawText("B) Spouse", { x: bX, y, size: 7, font: fontBold });
     y -= 10;
     for (const r of sec.rows) {
-      if (y < 58) break;
-      const a = computedPart4Cell(payload, r.no, "A");
-      const b = computedPart4Cell(payload, r.no, "B");
+      // Allow one more row near the footer-safe area so trailing items
+      // (especially item 65) are not dropped when space is tight.
+      if (y < 46) break;
+      const a =
+        renderMode === "verbatim" ? part4Cell(payload, r.no, "A") : computedPart4Cell(payload, r.no, "A");
+      const b =
+        renderMode === "verbatim" ? part4Cell(payload, r.no, "B") : computedPart4Cell(payload, r.no, "B");
       const rawLabel = str(r.label);
       const lab = rawLabel.length > 54 ? rawLabel.slice(0, 52) + "…" : rawLabel;
       page.drawText(String(r.no), { x: noX, y, size: 7, font: fontBold });
@@ -174,7 +207,7 @@ function drawPart4Sections(
       page.drawText(b || "0.00", { x: bX, y, size: 7, font });
       y -= 9;
     }
-    y -= 3;
+    y -= 5;
   }
   return y;
 }
@@ -250,28 +283,50 @@ function drawFormHeader(page: PDFPage, font: PDFFont, fontBold: PDFFont, pageNum
   page.drawText("January 2018 (ENCS)", { x: M + 16, y: top - 50, size: 7.5, font });
   page.drawText(`Page ${pageNum}`, { x: M + 38, y: top - 70, size: 8, font: fontBold });
 
-  page.drawText("Annual Income Tax Return", { x: M + leftW + 92, y: top - 20, size: 15, font: fontBold });
+  const midLeft = M + leftW;
+  const rightLeft = M + leftW + midW;
+  const centerText = (text: string, size: number, leftX: number, width: number) =>
+    leftX + Math.max(0, (width - font.widthOfTextAtSize(text, size)) / 2);
+  const centerTextBold = (text: string, size: number, leftX: number, width: number) =>
+    leftX + Math.max(0, (width - fontBold.widthOfTextAtSize(text, size)) / 2);
+
+  page.drawText("Annual Income Tax Return", {
+    x: centerTextBold("Annual Income Tax Return", 14, midLeft, midW),
+    y: top - 20,
+    size: 14,
+    font: fontBold,
+  });
   page.drawText("Individuals Earning Income PURELY from Business/Profession", {
-    x: M + leftW + 22,
+    x: centerTextBold("Individuals Earning Income PURELY from Business/Profession", 8.3, midLeft, midW),
     y: top - 35,
-    size: 8.5,
+    size: 8.3,
     font: fontBold,
   });
   page.drawText("[Graduated rates with OSD or 8% flat income tax rate]", {
-    x: M + leftW + 68,
+    x: centerText("[Graduated rates with OSD or 8% flat income tax rate]", 7.5, midLeft, midW),
     y: top - 46,
-    size: 7.8,
+    size: 7.5,
     font,
   });
   page.drawText("Values shown mirror the submitted portal evaluation fields.", {
-    x: M + leftW + 54,
+    x: centerText("Values shown mirror the submitted portal evaluation fields.", 7.5, midLeft, midW),
     y: top - 62,
-    size: 7.8,
+    size: 7.5,
     font,
   });
 
-  page.drawText("Client evaluation copy", { x: M + leftW + midW + 22, y: top - 18, size: 8.5, font: fontBold });
-  page.drawText("Not a BIR-filed return", { x: M + leftW + midW + 26, y: top - 31, size: 7.6, font });
+  page.drawText("Client evaluation copy", {
+    x: centerTextBold("Client evaluation copy", 8.2, rightLeft, rightW),
+    y: top - 18,
+    size: 8.2,
+    font: fontBold,
+  });
+  page.drawText("Not a BIR-filed return", {
+    x: centerText("Not a BIR-filed return", 7.4, rightLeft, rightW),
+    y: top - 31,
+    size: 7.4,
+    font,
+  });
   page.drawRectangle({
     x: M + leftW + midW + 22,
     y: top - 78,
@@ -517,7 +572,14 @@ function drawOptionRow(
   }
 }
 
-function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, payload: AnyObj, yStart: number): number {
+function drawPage1UiClone(
+  page: PDFPage,
+  font: PDFFont,
+  fontBold: PDFFont,
+  payload: AnyObj,
+  yStart: number,
+  renderMode: PdfRenderMode
+): number {
   let y = yStart;
 
   y = drawSectionBand(page, fontBold, "PART I - BACKGROUND INFORMATION ON TAXPAYER/FILER", y);
@@ -535,7 +597,7 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
     tx += i === 3 ? 50 : 54;
     if (i < 3) page.drawText("-", { x: tx - 5, y: tinY + 6, size: 8.8, font });
   }
-  drawLabeledInput(page, font, fontBold, { x: 190, y: tinY, w: 72, h: 18, label: "5 RDO Code", value: str(payload.rdo) });
+  drawLabeledInput(page, font, fontBold, { x: 258, y: tinY, w: 72, h: 18, label: "5 RDO Code", value: str(payload.rdo) });
   drawOptionRow(page, font, fontBold, {
     x: rightCol,
     y,
@@ -548,7 +610,8 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
   y = tinY - 28;
 
   // Row: 7 ATC options (fixed two-column geometry for stable wrapping/alignment)
-  const atcValue = atcLabel(payload.atc);
+  const atcValue = renderMode === "verbatim" ? "" : atcLabel(payload.atc);
+  const atcPick = renderMode === "verbatim" ? atcVerbatimSelectionIndex(payload.atc) : -2;
   page.drawText("7 Alphanumeric Tax Code (ATC)", { x: left, y: y + 12, size: 8.2, font: fontBold });
   const atcOptions = [
     "II012 Business Income-Graduated IT Rates",
@@ -603,7 +666,10 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
   });
 
   for (let i = 0; i < atcOptions.length; i++) {
-    const selected = atcOptions[i] === atcValue || (i === 3 && atcValue.includes("II017"));
+    const selected =
+      renderMode === "verbatim"
+        ? i === atcPick
+        : atcOptions[i] === atcValue || (i === 3 && atcValue.includes("II017"));
     const col = i < 2 ? 0 : 1;
     const row = i % 2;
     const cellX = atcBoxX + 6 + col * (atcColW + 6);
@@ -620,7 +686,7 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
     y: y - 14,
     w: fullW,
     label: "8 Taxpayer's Name (Last Name, First Name, Middle Name)",
-    value: derivedTaxpayerName(payload),
+    value: renderMode === "verbatim" ? str(payload.taxpayerName) : derivedTaxpayerName(payload),
   });
   y -= 38;
 
@@ -634,7 +700,7 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
 
   drawLabeledInput(page, font, fontBold, { x: left, y: y - 14, w: 170, label: "12 Citizenship", value: str(payload.citizenship) });
   drawOptionRow(page, font, fontBold, {
-    x: 190,
+    x: 230,
     y: y + 4,
     label: "13 Claiming Foreign Tax Credits?",
     options: [
@@ -714,17 +780,25 @@ function drawPage1UiClone(page: PDFPage, font: PDFFont, fontBold: PDFFont, paylo
     ],
     64
   );
-  y -= 32;
+  // Add extra vertical gap before Item 19 so choice rows above do not crowd the tax-rate lines.
+  y -= 44;
 
   page.drawText("19 Tax Rate", { x: left, y: y + 10, size: 8.2, font: fontBold });
-  const rateLabel = taxRateLabel(payload.taxRateMethod);
-  page.drawText(`${rateLabel.includes("Graduated") ? "(x)" : "( )"} Graduated Rates with OSD as method of deduction`, {
+  const gradSelected =
+    renderMode === "verbatim"
+      ? String(payload.taxRateMethod || "").trim().toUpperCase() === "GRAD_OSD"
+      : taxRateLabel(payload.taxRateMethod).includes("Graduated");
+  const eightSelected =
+    renderMode === "verbatim"
+      ? String(payload.taxRateMethod || "").trim().toUpperCase() === "EIGHT_PERCENT"
+      : taxRateLabel(payload.taxRateMethod).includes("8%");
+  page.drawText(`${gradSelected ? "(x)" : "( )"} Graduated Rates with OSD as method of deduction`, {
     x: left + 6,
     y: y - 4,
     size: 8.2,
     font,
   });
-  page.drawText(`${rateLabel.includes("8%") ? "(x)" : "( )"} 8% in lieu of Graduated Rates under Sec. 24(A) & Percentage Tax under Sec. 116 of the NIRC, as amended`, {
+  page.drawText(`${eightSelected ? "(x)" : "( )"} 8% in lieu of Graduated Rates under Sec. 24(A) & Percentage Tax under Sec. 116 of the NIRC, as amended`, {
     x: left + 6,
     y: y - 16,
     size: 8.2,
@@ -782,15 +856,55 @@ export type Generate1701aPdfOptions = {
   accountEmail?: string | null;
   /** Total portal submits for this evaluation (1 = first). When greater than 1, a resubmission banner prints on each page. */
   submit1701aCount?: number | null;
+  /** `processed` (default) = business-rule PDF. `verbatim` = portal values as stored (processor1 snapshot). */
+  renderMode?: PdfRenderMode;
 };
 
 export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aPdfOptions) {
+  const renderMode = options?.renderMode ?? "processed";
+  const part4TaxDueA = amountNum(computedPart4Cell(payload, 46, "A"));
+  const part4TaxDueB = amountNum(computedPart4Cell(payload, 46, "B"));
+  const credit21A = amountNum(payload.taxCredits21A);
+  const credit21B = amountNum(payload.taxCredits21B);
+  const row21A = part4Money(credit21A);
+  const row21B = part4Money(credit21B);
+  const second23A = amountNum(payload.secondInstallment23A);
+  const second23B = amountNum(payload.secondInstallment23B);
+  const row20A = renderMode === "processed" ? part4Money(part4TaxDueA) : str(payload.taxDue20A);
+  const row20B = renderMode === "processed" ? part4Money(part4TaxDueB) : str(payload.taxDue20B);
+  const row22A = renderMode === "processed" ? part4Money(part4TaxDueA - credit21A) : str(payload.taxPayable22A);
+  const row22B = renderMode === "processed" ? part4Money(part4TaxDueB - credit21B) : str(payload.taxPayable22B);
+  const row24A =
+    renderMode === "processed"
+      ? part4Money(part4TaxDueA - credit21A - second23A)
+      : str(payload.amountToPay24A);
+  const row24B =
+    renderMode === "processed"
+      ? part4Money(part4TaxDueB - credit21B - second23B)
+      : str(payload.amountToPay24B);
+  const surcharge25A = amountNum(payload.surcharge25A);
+  const surcharge25B = amountNum(payload.surcharge25B);
+  const interest26A = amountNum(payload.interest26A);
+  const interest26B = amountNum(payload.interest26B);
+  const compromise27A = amountNum(payload.compromise27A);
+  const compromise27B = amountNum(payload.compromise27B);
+  const row24NumA = renderMode === "processed" ? part4TaxDueA - credit21A - second23A : amountNum(payload.amountToPay24A);
+  const row24NumB = renderMode === "processed" ? part4TaxDueB - credit21B - second23B : amountNum(payload.amountToPay24B);
+  const row29NumA = row24NumA - (surcharge25A + interest26A + compromise27A);
+  const row29NumB = row24NumB - (surcharge25B + interest26B + compromise27B);
+  const row29A = renderMode === "processed" ? part4Money(row29NumA) : str(payload.totalAmountPayable29A);
+  const row29B = renderMode === "processed" ? part4Money(row29NumB) : str(payload.totalAmountPayable29B);
+  const row30Aggregate = renderMode === "processed" ? part4Money(row29NumA + row29NumB) : str(payload.aggregate30);
   const emailItem11 = (() => {
+    if (renderMode === "verbatim") return str(payload.email);
     if (!options || !("accountEmail" in options)) return str(payload.email);
     const a = options.accountEmail;
     if (a != null && String(a).trim() !== "") return str(a);
     return "";
   })();
+  const footerProcessed = "Generated for evaluation / admin review — not a BIR-filed return.";
+  const footerVerbatim = "Generated from client-submitted portal values (unmodified) — not a BIR-filed return.";
+  const footerNote = renderMode === "verbatim" ? footerVerbatim : footerProcessed;
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -803,15 +917,15 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
   y = drawResubmitNotice(p1, font, y, options?.submit1701aCount);
   y = drawTopQuestionRow(p1, font, fontBold, payload, y);
   const page1Payload = { ...payload, email: emailItem11 };
-  y = drawPage1UiClone(p1, font, fontBold, page1Payload, y);
+  y = drawPage1UiClone(p1, font, fontBold, page1Payload, y, renderMode);
 
   y -= 8;
   y = drawSectionBand(p1, fontBold, "PART II — TOTAL TAX PAYABLE", y);
 
   y = table2Col(p1, font, fontBold, [
-    { label: "20  Tax Due", a: str(payload.taxDue20A), b: str(payload.taxDue20B) },
-    { label: "21  Less: Total Tax Credits/Payments", a: str(payload.taxCredits21A), b: str(payload.taxCredits21B) },
-    { label: "22  Tax Payable/(Overpayment)", a: str(payload.taxPayable22A), b: str(payload.taxPayable22B) },
+    { label: "20  Tax Due", a: row20A, b: row20B },
+    { label: "21  Less: Total Tax Credits/Payments", a: row21A, b: row21B },
+    { label: "22  Tax Payable/(Overpayment)", a: row22A, b: row22B },
     {
       label: "23  Less: Portion for 2nd Installment (if applicable)",
       a: str(payload.secondInstallment23A),
@@ -819,30 +933,15 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
     },
     {
       label: "24  Amount Required to be Paid upon Filing/(Overpayment)",
-      a: str(payload.amountToPay24A),
-      b: str(payload.amountToPay24B),
-    },
-    { label: "25  Surcharge", a: str(payload.surcharge25A), b: str(payload.surcharge25B) },
-    { label: "26  Interest", a: str(payload.interest26A), b: str(payload.interest26B) },
-    { label: "27  Compromise", a: str(payload.compromise27A), b: str(payload.compromise27B) },
-    { label: "28  Total Penalties", a: str(payload.totalPenalties28A), b: str(payload.totalPenalties28B) },
-    {
-      label: "29  Total Amount Payable/(Overpayment)",
-      a: str(payload.totalAmountPayable29A),
-      b: str(payload.totalAmountPayable29B),
+      a: row24A,
+      b: row24B,
     },
   ], y);
 
-  y -= 10;
-  y = rowPair(p1, font, "30  Aggregate Amount Payable/(Overpayment) (29A + 29B)", str(payload.aggregate30), y);
-
-  y -= 6;
-  y = rowPair(p1, font, "Overpayment option (if applicable) — mark one", overpayLabel(payload.overpaymentOption), y);
-
-  p1.drawText("— End of Page 1 —", { x: M, y: 42, size: 8, font });
-  p1.drawText("Generated for evaluation / admin review — not a BIR-filed return.", {
+  p1.drawText("— End of Page 1 —", { x: M, y: 26, size: 8, font });
+  p1.drawText(footerNote, {
     x: M,
-    y: 30,
+    y: 14,
     size: 7,
     font,
   });
@@ -853,20 +952,50 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
   y = drawFormHeader(p2, font, fontBold, 2, y);
   y = drawResubmitNotice(p2, font, y, options?.submit1701aCount);
 
+  y = drawSectionBand(p2, fontBold, "PART II — TOTAL TAX PAYABLE (CONTINUED)", y);
+  y = table2Col(
+    p2,
+    font,
+    fontBold,
+    [
+      { label: "25  Surcharge", a: str(payload.surcharge25A), b: str(payload.surcharge25B) },
+      { label: "26  Interest", a: str(payload.interest26A), b: str(payload.interest26B) },
+      { label: "27  Compromise", a: str(payload.compromise27A), b: str(payload.compromise27B) },
+      { label: "28  Total Penalties", a: str(payload.totalPenalties28A), b: str(payload.totalPenalties28B) },
+      {
+        label: "29  Total Amount Payable/(Overpayment)",
+        a: row29A,
+        b: row29B,
+      },
+      {
+        label: "30  Aggregate Amount Payable/(Overpayment) (29A + 29B)",
+        a: row30Aggregate,
+        b: "",
+      },
+    ],
+    y
+  );
+  y -= 6;
+  y = rowPair(p2, font, "Overpayment option (if applicable) — mark one", overpayLabel(payload.overpaymentOption), y);
+  y -= 8;
+
   if (hasPart4Object(payload)) {
     y = drawSectionBand(p2, fontBold, "PART IV — COMPUTATION OF INCOME TAX (AS FILED)", y);
     y = drawParagraph(
       p2,
       font,
-      "Items 36–65: columns A) Taxpayer/Filer and B) Spouse as submitted. Spouse column may be blank if not applicable.",
+      renderMode === "verbatim"
+        ? "Items 36–65: values are shown exactly as entered on the portal (no computed overrides)."
+        : "Items 36–65: columns A) Taxpayer/Filer and B) Spouse as submitted. Spouse column may be blank if not applicable.",
       8,
       y,
       LINE_SMALL
     );
     y -= 2;
-    y = drawPart4Sections(p2, font, fontBold, payload, PART4_SECTIONS, y);
+    y = drawPart4Sections(p2, font, fontBold, payload, PART4_SECTIONS, y, renderMode);
 
-    y -= 6;
+    // Keep a visible gap between final Part IV row (e.g., item 65) and Declaration.
+    y -= 12;
     if (y < 86) y = 86;
     p2.drawText("Declaration", { x: M, y, size: 9, font: fontBold });
     y -= LINE_SMALL + 2;
@@ -882,10 +1011,10 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
       LINE_SMALL
     );
 
-    p2.drawText("— End of Page 2 —", { x: M, y: 42, size: 8, font });
-    p2.drawText("Generated for evaluation / admin review — not a BIR-filed return.", {
+    p2.drawText("— End of Page 2 —", { x: M, y: 26, size: 8, font });
+    p2.drawText(footerNote, {
       x: M,
-      y: 30,
+      y: 14,
       size: 7,
       font,
     });
@@ -932,10 +1061,10 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
       LINE_SMALL
     );
 
-    p2.drawText("— End of Page 2 —", { x: M, y: 42, size: 8, font });
-    p2.drawText("Generated for evaluation / admin review — not a BIR-filed return.", {
+    p2.drawText("— End of Page 2 —", { x: M, y: 26, size: 8, font });
+    p2.drawText(footerNote, {
       x: M,
-      y: 30,
+      y: 14,
       size: 7,
       font,
     });

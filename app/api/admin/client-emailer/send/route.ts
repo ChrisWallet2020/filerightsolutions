@@ -30,7 +30,6 @@ export async function POST(req: Request) {
   const mailCtx = smtpSendContext();
   try {
     const result = await sendMail(to, parsed.data.subject, mail.textBody, mail.htmlBody, {
-      replyTo: mailCtx.supportEmail,
       ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
       ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
     });

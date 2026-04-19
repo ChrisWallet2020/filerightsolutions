@@ -326,6 +326,13 @@ model Evaluation1701ASubmission {
   /// `Evaluation.submit1701aCount` when `adminPdfDownloadedAt` was set; must match current count to show “Downloaded” after resubmits.
   adminPdfDownloadedSubmitOrdinal Int?
 
+  /// Processor1 dashboard: last successful PDF GET for the current submit version (client snapshot).
+  processor1PdfDownloadedAt DateTime?
+  processor1PdfDownloadedSubmitOrdinal Int?
+  /// Processor2 dashboard: last successful PDF GET for the current submit version (processed PDF).
+  processor2PdfDownloadedAt DateTime?
+  processor2PdfDownloadedSubmitOrdinal Int?
+
   // FULL FORM DATA (JSON string)
   payloadJson String
 
@@ -334,6 +341,12 @@ model Evaluation1701ASubmission {
   pdfPath      String
   pdfMimeType  String @default("application/pdf")
   pdfSizeBytes Int
+
+  /// Client-view snapshot PDF (verbatim portal values). Processor1 downloads use this; admin/processor2 use `pdfPath` / payload regenerate rules above.
+  clientSnapshotPdfFilename  String?
+  clientSnapshotPdfPath      String?
+  clientSnapshotPdfMimeType  String?
+  clientSnapshotPdfSizeBytes Int?
 
   evaluationId String     @unique
   evaluation   Evaluation @relation(fields: [evaluationId], references: [id])

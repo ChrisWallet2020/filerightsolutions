@@ -7,7 +7,7 @@ const ERR_MAP: Record<string, string> = {
   unauthorized: "You are not signed in as admin.",
   invalid: "Please enter a valid recipient email, subject, and email content.",
   send_failed:
-    "Email send failed. Check Vercel logs and Graph mail configuration. If the API returned OK, check spam or promotions.",
+    "Email send failed. Check Vercel logs and Resend configuration. If the API returned OK, check spam or promotions.",
 };
 
 type PendingState = "preview" | "send" | null;
@@ -143,7 +143,7 @@ export function ClientEmailerForm() {
           <div className="adminNotice adminNotice--warn" style={{ marginTop: 14 }}>
             <strong className="adminNoticeTitle">Development mode</strong>
             <p className="adminNoticeBody">
-              Graph mail is not configured on this environment, so the message was only logged on the server and was not
+              Resend is not configured on this environment, so the message was only logged on the server and was not
               delivered.
             </p>
           </div>

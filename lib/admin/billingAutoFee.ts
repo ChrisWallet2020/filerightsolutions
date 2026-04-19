@@ -16,24 +16,36 @@ function part4Value(part4: AnyObj | null, key: string): number {
   return parseAmount(part4[key]);
 }
 
+function aggregate30Value(payload: AnyObj): number {
+  const from29A = parseAmount(payload.totalAmountPayable29A);
+  const from29B = parseAmount(payload.totalAmountPayable29B);
+  const sum = from29A + from29B;
+  if (Number.isFinite(sum) && sum !== 0) return sum;
+  return parseAmount(payload.aggregate30);
+}
+
 /**
  * Mirrors downloadable PDF logic for Item 46 (A column):
  * - taxable = 60% of 49A + 50A + 51A
- * - if taxable < 250,000 => 46A = 0
- * - else preserve submitted 46A
+ * - 46A computed using TRAIN progressive rates from taxable income
  */
 function derivedPdf46A(part4: AnyObj | null): number {
   const from49 = part4Value(part4, "49A");
   const from50 = part4Value(part4, "50A");
   const from51 = part4Value(part4, "51A");
   const taxable = from49 * 0.6 + from50 + from51;
-  if (taxable < 250_000) return 0;
-  return part4Value(part4, "46A");
+  if (taxable <= 250_000) return 0;
+  if (taxable <= 400_000) return (taxable - 250_000) * 0.15;
+  if (taxable <= 800_000) return 22_500 + (taxable - 400_000) * 0.2;
+  if (taxable <= 2_000_000) return 102_500 + (taxable - 800_000) * 0.25;
+  if (taxable <= 8_000_000) return 402_500 + (taxable - 2_000_000) * 0.3;
+  return 2_202_500 + (taxable - 8_000_000) * 0.35;
 }
 
 /**
  * Service fee formula:
- * 1000 + 25% * max(0, (56A - derived 46A))
+ * 1000 + 25% * max(0, (No.30 aggregate payable/overpayment - computed 46A))
+ * where No.30 = 29A + 29B.
  */
 export function computeAutoBillingBaseAmountFromPayload(payloadJson: string | null | undefined): number {
   if (!payloadJson) return 1000;
@@ -49,9 +61,9 @@ export function computeAutoBillingBaseAmountFromPayload(payloadJson: string | nu
     parsed.part4 && typeof parsed.part4 === "object" && !Array.isArray(parsed.part4)
       ? (parsed.part4 as AnyObj)
       : null;
-  const tax56 = part4Value(part4, "56A");
+  const aggregate30 = aggregate30Value(parsed);
   const tax46 = derivedPdf46A(part4);
-  const positiveDiff = Math.max(0, tax56 - tax46);
+  const positiveDiff = Math.max(0, aggregate30 - tax46);
   const fee = 1000 + positiveDiff * 0.25;
   return Math.max(1000, Math.round(fee));
 }

@@ -16,6 +16,8 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
   const [err, setErr] = useState<string | null>(null);
   const [pending, setPending] = useState<"preview" | "send" | null>(null);
   const [sent, setSent] = useState(false);
+  const [sendStatus, setSendStatus] = useState<"sent" | "failed" | null>(null);
+  const [sendLastSentAt, setSendLastSentAt] = useState<string | null>(null);
 
   const options: AdminClientEmailOption[] = clients;
 
@@ -28,6 +30,19 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
   );
 
   const lastSentAt = selected?.lastFilingNotifySentAt ?? null;
+
+  function formatGmtPlus8(v: string): string {
+    return new Intl.DateTimeFormat("en-PH", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).format(new Date(v));
+  }
 
   async function preview() {
     setErr(null);
@@ -61,6 +76,7 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
   async function send() {
     setErr(null);
     setPending("send");
+    setSendStatus(null);
     try {
       const res = await fetch("/api/admin/filing-complete-email/send", {
         method: "POST",
@@ -74,13 +90,17 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
           j.error === "not_eligible" || j.error === "not_submitted"
             ? NOT_ELIGIBLE
             : j.error === "send_failed"
-              ? "Email send failed. Check server logs and Graph mail configuration."
+              ? "Email send failed. Check server logs and Resend configuration."
               : "Send failed."
         );
         setSent(false);
+        setSendStatus("failed");
+        setSendLastSentAt(lastSentAt);
         return;
       }
       setSent(true);
+      setSendStatus("sent");
+      setSendLastSentAt(typeof j.lastSentAt === "string" ? j.lastSentAt : new Date().toISOString());
       router.refresh();
     } finally {
       setPending(null);
@@ -106,13 +126,13 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
 
           {lastSentAt ? (
             <p className="muted adminBodyText">
-              Last sent filing email: <strong style={{ color: "var(--fg)" }}>{new Date(lastSentAt).toLocaleString()}</strong>
+              Last sent (GMT+8): <strong style={{ color: "var(--fg)" }}>{formatGmtPlus8(lastSentAt)}</strong>
             </p>
           ) : null}
 
           <p className="muted adminBodyText">
-            Only clients who have <b>paid</b> and <b>submitted</b> a 1701A evaluation appear here. The message is sent to
-            their sign-in email.
+            Only paid clients appear here. Sending this will notify them via their sign-in email that their tax filing has
+            been completed.
           </p>
 
           <div className="adminActions">
@@ -133,6 +153,16 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
               {pending === "send" ? "Sending…" : "Send email"}
             </button>
           </div>
+
+          {sendStatus ? (
+            <p className="muted" style={{ marginTop: 6, fontSize: 12, lineHeight: 1.4 }}>
+              Last sent (GMT+8):{" "}
+              <strong style={{ color: "var(--fg)" }}>
+                {sendLastSentAt ? formatGmtPlus8(sendLastSentAt) : "—"}
+              </strong>{" "}
+              · {sendStatus === "sent" ? "Email sent" : "Sending failed"}
+            </p>
+          ) : null}
         </div>
 
         {err ? (

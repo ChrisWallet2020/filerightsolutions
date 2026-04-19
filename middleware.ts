@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE, AGENT_SESSION_COOKIE, parseSignedSession } from "@/lib/session";
+import {
+  ADMIN_SESSION_COOKIE,
+  AGENT_SESSION_COOKIE,
+  PROCESSOR1_SESSION_COOKIE,
+  PROCESSOR2_SESSION_COOKIE,
+  parseSignedSession,
+} from "@/lib/session";
 import { SESSION_SECRET } from "@/lib/sessionSecret";
 
 /**
@@ -45,6 +51,22 @@ async function hasValidAgentCookie(req: NextRequest): Promise<boolean> {
   return parsed.signature === expected;
 }
 
+async function hasValidProcessor2Cookie(req: NextRequest): Promise<boolean> {
+  const cookie = req.cookies.get(PROCESSOR2_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(cookie);
+  if (!parsed) return false;
+  const expected = await sign(parsed.payload);
+  return parsed.signature === expected;
+}
+
+async function hasValidProcessor1Cookie(req: NextRequest): Promise<boolean> {
+  const cookie = req.cookies.get(PROCESSOR1_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(cookie);
+  if (!parsed) return false;
+  const expected = await sign(parsed.payload);
+  return parsed.signature === expected;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -52,6 +74,22 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith("/admin/login")) return NextResponse.next();
     if (!(await hasValidAdminCookie(req))) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/processor1_dashboard")) {
+    if (pathname.startsWith("/processor1_dashboard/login")) return NextResponse.next();
+    if (!(await hasValidProcessor1Cookie(req))) {
+      return NextResponse.redirect(new URL("/processor1_dashboard/login", req.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/processor2_dashboard")) {
+    if (pathname.startsWith("/processor2_dashboard/login")) return NextResponse.next();
+    if (!(await hasValidProcessor2Cookie(req))) {
+      return NextResponse.redirect(new URL("/processor2_dashboard/login", req.url));
     }
     return NextResponse.next();
   }
@@ -69,5 +107,15 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/agent-dashboard", "/agent-dashboard/:path*", "/agent/account", "/agent/account/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/processor1_dashboard",
+    "/processor1_dashboard/:path*",
+    "/processor2_dashboard",
+    "/processor2_dashboard/:path*",
+    "/agent-dashboard",
+    "/agent-dashboard/:path*",
+    "/agent/account",
+    "/agent/account/:path*",
+  ],
 };

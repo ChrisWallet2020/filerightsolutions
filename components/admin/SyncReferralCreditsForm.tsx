@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 
 export function SyncReferralCreditsForm() {
   return (
-    <form action="/api/admin/sync-referral-credits" method="post" style={{ marginTop: 12 }}>
+    <form action="/api/admin/sync-referral-credits" method="post">
       <SubmitButton
         spinnerOnLightBg
         pendingLabel="Syncing…"

@@ -1,3 +1,6 @@
+import { Resend } from "resend";
+import { resolveMailReplyTo } from "./mailReplyTo";
+
 type SendMailResult = { messageId: string };
 
 export type MailAttachment = {
@@ -6,15 +9,9 @@ export type MailAttachment = {
   contentType?: string;
 };
 
-function graphEnv() {
+function resendEnv() {
   return {
-    tenantId: (process.env.GRAPH_TENANT_ID || "").trim(),
-    clientId: (process.env.GRAPH_CLIENT_ID || "").trim(),
-    clientSecret: (process.env.GRAPH_CLIENT_SECRET || "").trim(),
-    senderUser: (process.env.GRAPH_SENDER_USER || "").trim(),
-    from: (process.env.SMTP_FROM || "").trim(),
-    saveToSentItems:
-      (process.env.GRAPH_SAVE_TO_SENT_ITEMS || "true").trim().toLowerCase() !== "false",
+    apiKey: (process.env.RESEND_API_KEY || "").trim(),
   };
 }
 
@@ -25,190 +22,113 @@ function mailFromDisplayDefaults() {
   };
 }
 
-function hasGraphConfig(): boolean {
-  const g = graphEnv();
-  return Boolean(g.tenantId && g.clientId && g.clientSecret && g.senderUser);
+function hasResendConfig(): boolean {
+  return Boolean(resendEnv().apiKey);
 }
 
 /** After a failed send: true if credentials exist (provider likely rejected), false if env missing. */
 export function isMailEnvConfigured(): boolean {
-  return hasGraphConfig();
+  return hasResendConfig();
 }
 /** Backward-compat alias while callsites migrate naming. */
 export const isSmtpEnvConfigured = isMailEnvConfigured;
 
 export type MailHealthStatus = {
-  provider: "microsoft-graph";
+  provider: "resend";
   configured: boolean;
-  senderUser: string;
+  /** True when `RESEND_API_KEY` is set (kept for existing `/api/admin/email-health` consumers). */
   tokenOk: boolean;
   error?: string;
 };
 
-type GraphTokenCache = { token: string; expiresAtMs: number };
-let graphTokenCache: GraphTokenCache | null = null;
-
-function parseAddressHeader(input: string): { address: string; name?: string } {
-  const trimmed = input.trim();
-  const m = trimmed.match(/^(.*?)<([^>]+)>$/);
-  if (!m) return { address: trimmed };
-  const name = m[1].trim().replace(/^"(.*)"$/, "$1");
-  const address = m[2].trim();
-  return name ? { address, name } : { address };
+let resendSingleton: Resend | null = null;
+function getResend(): Resend {
+  const { apiKey } = resendEnv();
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not set");
+  }
+  if (!resendSingleton) {
+    resendSingleton = new Resend(apiKey);
+  }
+  return resendSingleton;
 }
 
-function toRecipientObjects(csv: string): Array<{ emailAddress: { address: string } }> {
-  return csv
+function resolveFromHeader(opts: SendMailOptions | undefined): string {
+  const d = mailFromDisplayDefaults();
+  const override = opts?.fromOverride?.trim();
+  if (override) return override;
+  const envFrom = (process.env.SMTP_FROM || process.env.RESEND_FROM || "").trim();
+  if (envFrom) return envFrom;
+  if (process.env.NODE_ENV !== "production") {
+    return `${d.siteName} <onboarding@resend.dev>`;
+  }
+  return `${d.siteName} <${d.supportEmail}>`;
+}
+
+function csvToList(csv: string | undefined): string[] | undefined {
+  const list = (csv || "")
     .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((address) => ({ emailAddress: { address } }));
-}
-
-async function getGraphAccessToken(): Promise<string> {
-  const now = Date.now();
-  if (graphTokenCache && graphTokenCache.expiresAtMs > now + 30_000) {
-    return graphTokenCache.token;
-  }
-
-  const g = graphEnv();
-  const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(g.tenantId)}/oauth2/v2.0/token`;
-  const form = new URLSearchParams({
-    client_id: g.clientId,
-    client_secret: g.clientSecret,
-    grant_type: "client_credentials",
-    scope: "https://graph.microsoft.com/.default",
-  });
-
-  const tokenResp = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: form,
-  });
-  const tokenData = (await tokenResp.json().catch(() => ({}))) as {
-    access_token?: string;
-    expires_in?: number;
-    error_description?: string;
-  };
-  if (!tokenResp.ok || !tokenData.access_token) {
-    throw new Error(
-      `Graph token request failed (${tokenResp.status}): ${tokenData.error_description || "no_access_token"}`
-    );
-  }
-
-  graphTokenCache = {
-    token: tokenData.access_token,
-    expiresAtMs: now + Math.max((tokenData.expires_in || 3600) - 120, 60) * 1000,
-  };
-  return graphTokenCache.token;
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return list.length ? list : undefined;
 }
 
 export async function getMailHealthStatus(): Promise<MailHealthStatus> {
-  const g = graphEnv();
-  if (!hasGraphConfig()) {
+  if (!hasResendConfig()) {
     return {
-      provider: "microsoft-graph",
+      provider: "resend",
       configured: false,
-      senderUser: g.senderUser,
       tokenOk: false,
-      error:
-        "Missing GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, or GRAPH_SENDER_USER.",
+      error: "Missing RESEND_API_KEY.",
     };
   }
-  try {
-    await getGraphAccessToken();
-    return {
-      provider: "microsoft-graph",
-      configured: true,
-      senderUser: g.senderUser,
-      tokenOk: true,
-    };
-  } catch (err) {
-    return {
-      provider: "microsoft-graph",
-      configured: true,
-      senderUser: g.senderUser,
-      tokenOk: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
+  return {
+    provider: "resend",
+    configured: true,
+    tokenOk: true,
+  };
 }
 
-async function sendViaGraphApi(
+async function sendViaResend(
   to: string,
   subject: string,
   text: string,
   html: string | undefined,
   opts: SendMailOptions | undefined
 ): Promise<SendMailResult> {
-  const g = graphEnv();
-  const d = mailFromDisplayDefaults();
-  const defaultMailbox = g.senderUser || d.supportEmail;
-  const fromRaw = opts?.fromOverride?.trim() || (g.from ? g.from : `${d.siteName} <${defaultMailbox}>`);
-  const fromParsed = parseAddressHeader(fromRaw);
-
-  const message = {
+  const from = resolveFromHeader(opts);
+  const replySource = resolveMailReplyTo(opts?.replyTo);
+  const replyList = (csvToList(replySource) ?? [replySource]) as string | string[];
+  const { data, error } = await getResend().emails.send({
+    from,
+    to,
     subject,
-    body: {
-      contentType: html ? "HTML" : "Text",
-      content: html || text,
-    },
-    toRecipients: toRecipientObjects(to),
-    from: {
-      emailAddress: {
-        address: fromParsed.address,
-        ...(fromParsed.name ? { name: fromParsed.name } : {}),
-      },
-    },
-    ...(opts?.replyTo
-      ? {
-          replyTo: toRecipientObjects(opts.replyTo),
-        }
-      : {}),
-    ...(opts?.bcc
-      ? {
-          bccRecipients: toRecipientObjects(opts.bcc),
-        }
-      : {}),
+    ...(html ? { html, ...(text ? { text } : {}) } : { text }),
+    replyTo: replyList,
+    ...(opts?.bcc?.trim() ? { bcc: (csvToList(opts.bcc) ?? opts.bcc.trim()) as string | string[] } : {}),
     ...(opts?.attachments?.length
       ? {
           attachments: opts.attachments.map((a) => ({
-            "@odata.type": "#microsoft.graph.fileAttachment",
-            name: a.filename,
-            contentType: a.contentType ?? "application/octet-stream",
-            contentBytes: (
-              Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content)
-            ).toString("base64"),
+            filename: a.filename,
+            content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+            ...(a.contentType ? { contentType: a.contentType } : {}),
           })),
         }
       : {}),
-  };
-
-  const accessToken = await getGraphAccessToken();
-  const sendUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(g.senderUser)}/sendMail`;
-  const sendResp = await fetch(sendUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message,
-      saveToSentItems: g.saveToSentItems,
-    }),
   });
-
-  if (!sendResp.ok) {
-    const errorBody = await sendResp.text().catch(() => "");
-    throw new Error(`Graph sendMail failed (${sendResp.status}): ${errorBody || "no_error_body"}`);
+  if (error) {
+    const detail =
+      typeof (error as { message?: string }).message === "string"
+        ? (error as { message: string }).message
+        : JSON.stringify(error);
+    throw new Error(`Resend send failed: ${detail}`);
   }
-
-  return { messageId: "GRAPH_ACCEPTED" };
+  return { messageId: data?.id || "RESEND_ACCEPTED" };
 }
 
 export type SendMailOptions = {
   replyTo?: string;
-  /** If set, used as From instead of SMTP_FROM / default sender mailbox. */
+  /** If set, used as From instead of SMTP_FROM / RESEND_FROM / defaults. */
   fromOverride?: string;
   /** Comma-separated BCC addresses. */
   bcc?: string;
@@ -235,24 +155,22 @@ export async function sendMail(
       throw new Error(`Recipient is suppressed: ${to}`);
     }
   }
-  if (!hasGraphConfig()) {
+  if (!hasResendConfig()) {
     if (process.env.NODE_ENV !== "production") {
       console.log("[MAIL DEV MODE]", {
         to,
         subject,
         text,
         html,
-        replyTo: opts?.replyTo,
+        replyTo: resolveMailReplyTo(opts?.replyTo),
         attachments: opts?.attachments?.map((a) => a.filename),
       });
       return { messageId: "DEV_LOG_ONLY" };
     }
 
-    throw new Error(
-      "Graph mail is not configured. Set GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, and GRAPH_SENDER_USER."
-    );
+    throw new Error("Resend is not configured. Set RESEND_API_KEY (and SMTP_FROM or RESEND_FROM for production).");
   }
-  return sendViaGraphApi(to, subject, text, html, opts);
+  return sendViaResend(to, subject, text, html, opts);
 }
 
 export async function sendMailWithAttachments(
@@ -269,7 +187,7 @@ export async function sendMailWithAttachments(
   if (await isSuppressedEmail(to)) {
     throw new Error(`Recipient is suppressed: ${to}`);
   }
-  if (!hasGraphConfig()) {
+  if (!hasResendConfig()) {
     if (process.env.NODE_ENV !== "production") {
       console.log("[MAIL DEV MODE attach]", {
         to,
@@ -280,9 +198,7 @@ export async function sendMailWithAttachments(
       });
       return { messageId: "DEV_LOG_ONLY" };
     }
-    throw new Error(
-      "Graph mail is not configured. Set GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, and GRAPH_SENDER_USER."
-    );
+    throw new Error("Resend is not configured. Set RESEND_API_KEY (and SMTP_FROM or RESEND_FROM for production).");
   }
-  return sendViaGraphApi(to, subject, text, html, { attachments });
+  return sendViaResend(to, subject, text, html, { attachments });
 }

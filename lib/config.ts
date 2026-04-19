@@ -25,15 +25,6 @@ export const config = {
   adminEmail: process.env.ADMIN_EMAIL || "admin@yourdomain.com",
   adminPassword: process.env.ADMIN_PASSWORD || "change_me",
   sessionSecret: SESSION_SECRET,
-  smtp: {
-    host: process.env.SMTP_HOST || "",
-    port: Number(process.env.SMTP_PORT || "587"),
-    user: process.env.SMTP_USER || "",
-    pass: process.env.SMTP_PASS || "",
-    from: process.env.SMTP_FROM || "",
-    /** Optional BCC on outgoing mail (e.g. your inbox) to confirm the server accepted the message. */
-    bcc: (process.env.SMTP_BCC || "").trim(),
-  },
   dragonpay: {
     merchantId: process.env.DRAGONPAY_MERCHANT_ID || "",
     secret: process.env.DRAGONPAY_SECRET || ""

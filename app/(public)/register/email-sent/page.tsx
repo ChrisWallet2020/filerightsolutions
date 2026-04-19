@@ -33,10 +33,10 @@ export default function RegisterEmailSentPage({
             }}
           >
             Your account is ready, but we couldn&apos;t send the welcome email (usually{" "}
-            <strong>Graph mail is not configured</strong> on the server). Add{" "}
-            <code style={{ fontSize: 13 }}>GRAPH_TENANT_ID</code>, <code style={{ fontSize: 13 }}>GRAPH_CLIENT_ID</code>
-            , <code style={{ fontSize: 13 }}>GRAPH_CLIENT_SECRET</code>, and{" "}
-            <code style={{ fontSize: 13 }}>GRAPH_SENDER_USER</code> in Vercel → Environment Variables, then redeploy.
+            <strong>Resend is not configured</strong> on the server). Add{" "}
+            <code style={{ fontSize: 13 }}>RESEND_API_KEY</code> in Vercel → Environment Variables (and a verified{" "}
+            <code style={{ fontSize: 13 }}>SMTP_FROM</code> or <code style={{ fontSize: 13 }}>RESEND_FROM</code> for
+            production), then redeploy.
           </div>
           <p style={{ color: "#475569", lineHeight: 1.7 }}>
             You can <strong>sign in now</strong> with{" "}

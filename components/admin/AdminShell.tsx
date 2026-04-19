@@ -6,13 +6,12 @@ import { usePathname } from "next/navigation";
 type AdminNavItem = { href: string; label: string };
 
 const NAV_ITEMS: AdminNavItem[] = [
+  { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/evaluations", label: "Evaluations" },
   { href: "/admin/evaluation-limits", label: "Evaluation limits" },
   { href: "/admin/high-volume", label: "Submission controls" },
   { href: "/admin/billing", label: "Billing" },
   { href: "/admin/filing-queue", label: "Filing queue" },
-  { href: "/admin/filing-complete-email", label: "Filing email" },
   { href: "/admin/client-emailer", label: "Client emailer" },
   { href: "/admin/agents", label: "Agents" },
 ];

@@ -41,18 +41,17 @@ export async function POST(req: Request) {
   const subject = "Email health check";
   const textBody = [
     "This is a test message from your Tax Filing website.",
-    "It confirms that Microsoft Graph email sending is configured and reachable.",
+    "It confirms that Resend email sending is configured and reachable.",
     "",
     `Sent at: ${new Date().toISOString()}`,
   ].join("\n");
   const htmlBody =
     "<p>This is a test message from your Tax Filing website.</p>" +
-    "<p>It confirms that Microsoft Graph email sending is configured and reachable.</p>" +
+    "<p>It confirms that Resend email sending is configured and reachable.</p>" +
     `<p>Sent at: ${new Date().toISOString()}</p>`;
 
   try {
     const result = await sendMail(to, subject, textBody, htmlBody, {
-      replyTo: ctx.supportEmail,
       ...(ctx.smtpBcc ? { bcc: ctx.smtpBcc } : {}),
       ...(!ctx.smtpFromEnv ? { fromOverride: ctx.fromOverrideWhenNoSmtpFrom } : {}),
     });

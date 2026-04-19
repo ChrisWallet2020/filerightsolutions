@@ -1,4 +1,6 @@
 export const ADMIN_SESSION_COOKIE = "tax_site_admin";
+export const PROCESSOR1_SESSION_COOKIE = "tax_site_processor1";
+export const PROCESSOR2_SESSION_COOKIE = "tax_site_processor2";
 export const USER_SESSION_COOKIE = "tax_site_user";
 export const AGENT_SESSION_COOKIE = "tax_site_agent";
 

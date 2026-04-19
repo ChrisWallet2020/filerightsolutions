@@ -54,7 +54,7 @@ export default async function AdminBillingPage({
       </p>
 
       {emailFailed ? (
-        <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+        <div className="adminNotice adminNotice--error" style={{ marginTop: 14, width: "100%", maxWidth: 760 }}>
           <strong className="adminNoticeTitle">Email failed to send</strong>
           {emailReason === "provider_content_filter" ? (
             <p className="adminNoticeBody">
@@ -73,24 +73,22 @@ export default async function AdminBillingPage({
             </p>
           ) : emailReason === "mail_send_failed" || emailReason === "smtp_send_failed" ? (
             <p className="adminNoticeBody">
-              The quote was still created. Graph mail is configured, but the provider rejected this message. Check{" "}
+              The quote was still created. Resend is configured, but the provider rejected this message. Check{" "}
               <a href="https://vercel.com/filerightsolutions/tax-service-site/logs" style={{ color: "#1d4ed8" }}>
                 Vercel logs
               </a>{" "}
-              for <code>BILLING_QUOTE_EMAIL_FAILED</code>. Common causes: wrong Graph app permission/consent, invalid
-              client secret, or sender address policy mismatch for <code>GRAPH_SENDER_USER</code>. You can send the
-              payment link manually below.
+              for <code>BILLING_QUOTE_EMAIL_FAILED</code>. Common causes: invalid <code>RESEND_API_KEY</code>, unverified
+              From domain, or content policy. You can send the payment link manually below.
             </p>
           ) : emailReason === "missing_mail_env" || emailReason === "missing_smtp_env" ? (
             <p className="adminNoticeBody">
-              The quote was still created. Set <code>GRAPH_TENANT_ID</code>, <code>GRAPH_CLIENT_ID</code>,{" "}
-              <code>GRAPH_CLIENT_SECRET</code>, and <code>GRAPH_SENDER_USER</code> for <strong>Production</strong> in
-              Vercel, redeploy, then retry. See{" "}
-              <code>.env.example</code>. Copy the link below meanwhile.
+              The quote was still created. Set <code>RESEND_API_KEY</code> (and a verified <code>SMTP_FROM</code> or{" "}
+              <code>RESEND_FROM</code> in production) for <strong>Production</strong> in Vercel, redeploy, then retry.
+              See <code>.env.example</code>. Copy the link below meanwhile.
             </p>
           ) : (
             <p className="adminNoticeBody">
-              The quote was still created. Configure Graph mail (see <code>.env.example</code>) or send the link manually
+              The quote was still created. Configure Resend (see <code>.env.example</code>) or send the link manually
               below.
             </p>
           )}
@@ -98,12 +96,11 @@ export default async function AdminBillingPage({
       ) : null}
 
       {emailDev ? (
-        <div className="adminNotice adminNotice--warn" style={{ marginTop: 14 }}>
+        <div className="adminNotice adminNotice--warn" style={{ marginTop: 14, width: "100%", maxWidth: 760 }}>
           <strong className="adminNoticeTitle">Development: email not delivered</strong>
           <p className="adminNoticeBody">
-            Graph mail is not configured, so the message was only logged on the server (see terminal). The quote was
-            still created—copy the payment link below or set <code>GRAPH_*</code> in <code>.env</code> to send real
-            mail.
+            Resend is not configured, so the message was only logged on the server (see terminal). The quote was still
+            created—copy the payment link below or set <code>RESEND_API_KEY</code> in <code>.env</code> to send real mail.
           </p>
         </div>
       ) : null}
@@ -123,14 +120,14 @@ export default async function AdminBillingPage({
       ) : null}
 
       {previewErrorMessage ? (
-        <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+        <div className="adminNotice adminNotice--error" style={{ marginTop: 14, width: "100%", maxWidth: 760 }}>
           <strong className="adminNoticeTitle">Billing preview failed</strong>
           <p className="adminNoticeBody">{previewErrorMessage}</p>
         </div>
       ) : null}
 
       {quoteErrorMessage ? (
-        <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+        <div className="adminNotice adminNotice--error" style={{ marginTop: 14, width: "100%", maxWidth: 760 }}>
           <strong className="adminNoticeTitle">Unable to create quote</strong>
           <p className="adminNoticeBody">{quoteErrorMessage}</p>
         </div>

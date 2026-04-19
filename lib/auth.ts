@@ -3,7 +3,14 @@ import type { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { config } from "./config";
-import { ADMIN_SESSION_COOKIE, AGENT_SESSION_COOKIE, USER_SESSION_COOKIE, parseSignedSession } from "./session";
+import {
+  ADMIN_SESSION_COOKIE,
+  AGENT_SESSION_COOKIE,
+  PROCESSOR1_SESSION_COOKIE,
+  PROCESSOR2_SESSION_COOKIE,
+  USER_SESSION_COOKIE,
+  parseSignedSession,
+} from "./session";
 
 /* =========================
    ADMIN SESSION
@@ -42,6 +49,62 @@ export function isAdminAuthed(): boolean {
   const parsed = parseSignedSession(raw);
   if (!parsed) return false;
   return parsed.payload === config.adminEmail && parsed.signature === sign(parsed.payload);
+}
+
+export function setProcessor1Session(username: string) {
+  const value = `${username}.${sign(username)}`;
+  cookies().set(PROCESSOR1_SESSION_COOKIE, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 14,
+  });
+}
+
+export function clearProcessor1Session() {
+  cookies().set(PROCESSOR1_SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+export function isProcessor1Authed(expectedUsername: string): boolean {
+  const raw = cookies().get(PROCESSOR1_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(raw);
+  if (!parsed) return false;
+  return parsed.payload === expectedUsername && parsed.signature === sign(parsed.payload);
+}
+
+export function setProcessor2Session(username: string) {
+  const value = `${username}.${sign(username)}`;
+  cookies().set(PROCESSOR2_SESSION_COOKIE, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 14,
+  });
+}
+
+export function clearProcessor2Session() {
+  cookies().set(PROCESSOR2_SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+export function isProcessor2Authed(expectedUsername: string): boolean {
+  const raw = cookies().get(PROCESSOR2_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(raw);
+  if (!parsed) return false;
+  return parsed.payload === expectedUsername && parsed.signature === sign(parsed.payload);
 }
 
 /* =========================

@@ -147,15 +147,6 @@ export function BillingQuoteForm({ submittedClients }: { submittedClients: Admin
               placeholder="Search by name…"
             />
           </label>
-          <label className="adminLabel">
-            Note to client (optional, shown on payment page)
-            <textarea
-              name="clientNote"
-              rows={3}
-              style={{ minHeight: 100 }}
-              placeholder="e.g. 1701A amendment — as discussed"
-            />
-          </label>
           <div className="adminFieldset">
             <p className="adminFieldsetTitle">Billing images (optional, up to 4)</p>
             <label className="muted adminLabel">

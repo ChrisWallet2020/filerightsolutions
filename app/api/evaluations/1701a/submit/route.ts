@@ -307,15 +307,27 @@ export async function POST(req: Request) {
     const pdfBytes = await generate1701aPdf(finalPayload, {
       accountEmail: evalRow.user?.email ?? null,
       submit1701aCount: submitOrdinalForPdf,
+      renderMode: "processed",
     });
     const pdfBuffer = Buffer.from(pdfBytes);
 
+    const pdfSnapshotBytes = await generate1701aPdf(finalPayload, {
+      accountEmail: evalRow.user?.email ?? null,
+      submit1701aCount: submitOrdinalForPdf,
+      renderMode: "verbatim",
+    });
+    const pdfSnapshotBuffer = Buffer.from(pdfSnapshotBytes);
+
     const pdfFilename = `evaluation_${evalRow.id}.pdf`;
+    const pdfSnapshotFilename = `evaluation_${evalRow.id}_client.pdf`;
     // Serverless / read-only FS: skip disk; admin PDF regenerates from payloadJson.
     let pdfPath: string;
     let pdfSizeBytes: number;
+    let clientSnapshotPdfPath: string;
+    let clientSnapshotPdfSizeBytes: number;
     const uploadsDir = path.join(process.cwd(), "uploads", "evaluations");
     const diskPath = path.join(uploadsDir, pdfFilename);
+    const diskSnapshotPath = path.join(uploadsDir, pdfSnapshotFilename);
     try {
       await fs.mkdir(uploadsDir, { recursive: true });
       await fs.writeFile(diskPath, pdfBuffer);
@@ -326,6 +338,17 @@ export async function POST(req: Request) {
       console.warn("1701A_PDF_DISK_SKIP:", diskErr);
       pdfPath = `__inline__/${pdfFilename}`;
       pdfSizeBytes = pdfBuffer.length;
+    }
+    try {
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.writeFile(diskSnapshotPath, pdfSnapshotBuffer);
+      const stat = await fs.stat(diskSnapshotPath);
+      clientSnapshotPdfPath = diskSnapshotPath;
+      clientSnapshotPdfSizeBytes = stat.size;
+    } catch (diskErr2) {
+      console.warn("1701A_CLIENT_PDF_DISK_SKIP:", diskErr2);
+      clientSnapshotPdfPath = `__inline_client__/${pdfSnapshotFilename}`;
+      clientSnapshotPdfSizeBytes = pdfSnapshotBuffer.length;
     }
 
     await prisma.$transaction(async (tx) => {
@@ -344,6 +367,10 @@ export async function POST(req: Request) {
           pdfPath,
           pdfMimeType: "application/pdf",
           pdfSizeBytes,
+          clientSnapshotPdfFilename: pdfSnapshotFilename,
+          clientSnapshotPdfPath,
+          clientSnapshotPdfMimeType: "application/pdf",
+          clientSnapshotPdfSizeBytes,
         },
       });
 

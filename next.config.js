@@ -35,13 +35,23 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/processor1",
+        destination: "/processor1_dashboard",
+        permanent: false,
+      },
+      {
+        source: "/processor2",
+        destination: "/processor2_dashboard",
+        permanent: false,
+      },
+      {
         source: "/admin",
-        destination: "/admin-chris",
+        destination: "/admin_dashboard",
         permanent: false,
       },
       {
         source: "/admin/:path*",
-        destination: "/admin-chris/:path*",
+        destination: "/admin_dashboard/:path*",
         permanent: false,
       },
     ];
@@ -49,11 +59,11 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/admin-chris",
+        source: "/admin_dashboard",
         destination: "/admin",
       },
       {
-        source: "/admin-chris/:path*",
+        source: "/admin_dashboard/:path*",
         destination: "/admin/:path*",
       },
     ];

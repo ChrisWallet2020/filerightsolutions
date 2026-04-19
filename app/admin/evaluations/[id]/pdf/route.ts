@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
 import { prisma } from "@/lib/db";
-import { isAdminAuthed } from "@/lib/auth";
-import { generate1701aPdf } from "@/lib/pdf1701a";
+import { isAdminAuthed, isProcessor1Authed, isProcessor2Authed } from "@/lib/auth";
+import { buildSuggestedFilename, readEvaluationPdfBytes } from "@/lib/admin/adminEvalPdfFile";
+import { getProcessor1Credentials, getProcessor2Credentials } from "@/lib/siteSettings";
 
 export const dynamic = "force-dynamic";
 
-function buildSuggestedFilename(fullName: string | null | undefined, evaluationId: string): string {
-  const cleanedName = (fullName || "")
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (cleanedName) return `evaluation_${cleanedName}.pdf`;
-  return `evaluation_${evaluationId}.pdf`;
-}
-
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  if (!isAdminAuthed()) return new NextResponse("Unauthorized", { status: 401 });
+  const [processor1, processor2] = await Promise.all([getProcessor1Credentials(), getProcessor2Credentials()]);
+  if (
+    !isAdminAuthed() &&
+    !isProcessor1Authed(processor1.username) &&
+    !isProcessor2Authed(processor2.username)
+  ) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
 
   const evaluationId = params.id;
 
@@ -34,56 +31,19 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
   if (!sub) return new NextResponse("Not found", { status: 404 });
 
-  /** Prefer regenerating from JSON so downloads always match portal fields (Page 1 + Page 2). */
-  if (sub.payloadJson?.trim()) {
-    try {
-      const payload = JSON.parse(sub.payloadJson) as Record<string, unknown>;
-      const pdfBytes = await generate1701aPdf(payload, {
-        accountEmail: sub.evaluation.user?.email ?? null,
-        submit1701aCount: sub.evaluation.submit1701aCount ?? null,
-      });
-      const submitOrdinal = sub.evaluation.submit1701aCount ?? 0;
-      await prisma.evaluation1701ASubmission.update({
-        where: { evaluationId },
-        data: {
-          adminPdfDownloadedAt: new Date(),
-          adminPdfDownloadedSubmitOrdinal: submitOrdinal,
-        },
-      });
-      const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
-      return new NextResponse(Buffer.from(pdfBytes), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
-          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-    } catch (e) {
-      console.error("ADMIN_EVAL_PDF_REGENERATE_FAILED:", e);
-    }
-  }
-
-  // Vercel submissions store no file on disk (see 1701a submit route).
-  if (sub.pdfPath.startsWith("__inline__/")) {
-    return new NextResponse("PDF not available", { status: 404 });
-  }
-
   try {
-    const bytes = await fs.readFile(sub.pdfPath);
-    const submitOrdinal = sub.evaluation.submit1701aCount ?? 0;
+    const pdf = await readEvaluationPdfBytes(sub);
     await prisma.evaluation1701ASubmission.update({
       where: { evaluationId },
       data: {
         adminPdfDownloadedAt: new Date(),
-        adminPdfDownloadedSubmitOrdinal: submitOrdinal,
+        adminPdfDownloadedSubmitOrdinal: pdf.submitOrdinal,
       },
     });
     const filename = buildSuggestedFilename(sub.evaluation.user?.fullName, evaluationId);
-    return new NextResponse(bytes, {
+    return new NextResponse(pdf.bytes, {
       headers: {
-        "Content-Type": sub.pdfMimeType || "application/pdf",
+        "Content-Type": pdf.mimeType,
         "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         Pragma: "no-cache",
