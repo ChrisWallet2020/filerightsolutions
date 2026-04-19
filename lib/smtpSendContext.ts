@@ -12,7 +12,7 @@ export function smtpSendContext() {
   const siteBaseUrl = baseRaw.replace(/\/+$/, "") || "http://localhost:3000";
 
   const supportEmail = (process.env.SUPPORT_EMAIL || "support@filerightsolutions.com").trim();
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance";
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Your Tax Filing Assistant";
   const smtpFromEnv = (process.env.SMTP_FROM || "").trim();
   const smtpBcc = (process.env.SMTP_BCC || "").trim();
   const mailbox = supportEmail;

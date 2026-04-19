@@ -8,7 +8,7 @@ export function Footer() {
         <div>
           <div className="footerTitle">{config.siteName}</div>
           <p className="muted">
-            Tax Filing Assistance for Job Order (JO) and Contract of Service (COS) professionals.
+            Tax filing assistant for Job Order (JO) and Contract of Service (COS) professionals.
           </p>
         </div>
 

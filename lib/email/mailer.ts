@@ -17,7 +17,7 @@ function resendEnv() {
 
 function mailFromDisplayDefaults() {
   return {
-    siteName: process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Tax Filing Assistance",
+    siteName: process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME || "Your Tax Filing Assistant",
     supportEmail: (process.env.SUPPORT_EMAIL || "support@filerightsolutions.com").trim(),
   };
 }

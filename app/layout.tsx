@@ -4,7 +4,10 @@ import { Suspense } from "react";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
 import { NavigationProgress } from "@/components/site/NavigationProgress";
 
-/** Icons: `app/icon.png` and `app/apple-icon.png` are picked up automatically; `public/favicon.ico` serves Google’s usual probe. */
+/**
+ * Icons: `app/favicon.ico` and `app/icon.png` follow Next.js file conventions.
+ * `generateMetadata` also emits explicit links so crawlers (e.g. Google favicon) get stable URLs.
+ */
 
 /** Canonical site URL for icons / Open Graph when `SITE_BASE_URL` is unset (e.g. use `VERCEL_URL` on Vercel). */
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,13 +18,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const base = raw.startsWith("http") ? raw.replace(/\/+$/, "") : "";
 
+  const faviconUrl = base ? `${base}/favicon.ico` : "/favicon.ico";
+  const pngIconUrl = base ? `${base}/icon.png` : "/icon.png";
+  const appleUrl = base ? `${base}/apple-icon.png` : "/apple-icon.png";
+
   const out: Metadata = {
     icons: {
       icon: [
-        { url: "/favicon.ico", sizes: "any" },
-        { url: "/icon.png", type: "image/png", sizes: "32x32" },
+        { url: faviconUrl, sizes: "any" },
+        { url: pngIconUrl, type: "image/png", sizes: "32x32" },
+        { url: pngIconUrl, type: "image/png", sizes: "48x48" },
       ],
-      apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+      shortcut: faviconUrl,
+      apple: [{ url: appleUrl, sizes: "180x180", type: "image/png" }],
     },
   };
 
