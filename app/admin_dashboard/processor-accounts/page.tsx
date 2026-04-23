@@ -21,7 +21,7 @@ export default async function ProcessorAccountsPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   if (!isAdminAuthed()) redirect("/admin_dashboard/login");
-  const saved = searchParams.saved === "1";
+  const saved = typeof searchParams.saved === "string" ? searchParams.saved : "";
   const error = typeof searchParams.error === "string" ? searchParams.error : "";
   const toolSaved = searchParams.toolSaved === "1";
   const toolError = typeof searchParams.toolError === "string" ? searchParams.toolError : "";
@@ -46,7 +46,9 @@ export default async function ProcessorAccountsPage({
       {saved ? (
         <div className="adminNotice adminNotice--success" style={{ marginTop: 14 }}>
           <strong className="adminNoticeTitle">Saved</strong>
-          <p className="adminNoticeBody">Processor account created.</p>
+          <p className="adminNoticeBody">
+            {saved === "deleted" ? "Processor account deleted." : "Processor account created."}
+          </p>
         </div>
       ) : null}
       {error ? (

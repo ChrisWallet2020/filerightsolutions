@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (!ok) {
       return NextResponse.redirect(new URL("/admin_dashboard/processor-accounts?error=missing", req.url), 303);
     }
-    return NextResponse.redirect(new URL("/admin_dashboard/processor-accounts?saved=1", req.url), 303);
+    return NextResponse.redirect(new URL("/admin_dashboard/processor-accounts?saved=deleted", req.url), 303);
   }
 
   const role = parseRole(form.get("role"));
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const error = created.code === "duplicate" ? "duplicate" : "invalid";
     return NextResponse.redirect(new URL(`/admin_dashboard/processor-accounts?error=${error}`, req.url), 303);
   }
-  return NextResponse.redirect(new URL("/admin_dashboard/processor-accounts?saved=1", req.url), 303);
+  return NextResponse.redirect(new URL("/admin_dashboard/processor-accounts?saved=created", req.url), 303);
 }
 
 export async function DELETE(req: Request) {
