@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     return NextResponse.redirect(new URL("/admin_dashboard/processor-accounts?error=invalid", req.url), 303);
   }
   const created = await createProcessorUser({ role, username, password });
-  if (!created.ok) {
+  if (created.ok === false) {
     const error = created.code === "duplicate" ? "duplicate" : "invalid";
     return NextResponse.redirect(new URL(`/admin_dashboard/processor-accounts?error=${error}`, req.url), 303);
   }
