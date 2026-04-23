@@ -60,6 +60,7 @@ export default async function TaxFilingResponsibilityNoticePage({
   if (!user) {
     redirect(`/api/auth/prepare-login?next=${encodeURIComponent(nextPath)}`);
   }
+  const taxpayerDisplayName = user.fullName.trim() || user.email;
 
   const quote = await prisma.paymentQuote.findUnique({
     where: { token },
@@ -176,8 +177,8 @@ export default async function TaxFilingResponsibilityNoticePage({
           You have full discretion to choose whether to proceed with:
         </p>
         <ul style={{ margin: "0 0 16px", paddingLeft: 22, color: "#334155", lineHeight: 1.65, fontSize: 15 }}>
-          <li>your previously filed return, or</li>
-          <li>the amended (optimized) return prepared through our service.</li>
+          <li>your original filed return prepared by {taxpayerDisplayName}, or</li>
+          <li>the amended (optimized) return prepared by FileRight Solutions.</li>
         </ul>
         <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: "#334155" }}>
           The decision to file any return, and to designate any representative to act on your behalf, is exclusively your

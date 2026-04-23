@@ -12,6 +12,9 @@ import {
   parseSignedSession,
 } from "./session";
 
+const PROCESSOR1_USER_SESSION_PREFIX = "p1u:";
+const PROCESSOR2_USER_SESSION_PREFIX = "p2u:";
+
 /* =========================
    ADMIN SESSION
 ========================= */
@@ -62,6 +65,18 @@ export function setProcessor1Session(username: string) {
   });
 }
 
+export function setProcessor1SessionForUser(userId: string) {
+  const payload = `${PROCESSOR1_USER_SESSION_PREFIX}${userId}`;
+  const value = `${payload}.${sign(payload)}`;
+  cookies().set(PROCESSOR1_SESSION_COOKIE, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 14,
+  });
+}
+
 export function clearProcessor1Session() {
   cookies().set(PROCESSOR1_SESSION_COOKIE, "", {
     httpOnly: true,
@@ -72,15 +87,30 @@ export function clearProcessor1Session() {
   });
 }
 
-export function isProcessor1Authed(expectedUsername: string): boolean {
+export function isProcessor1Authed(expectedUsername?: string): boolean {
   const raw = cookies().get(PROCESSOR1_SESSION_COOKIE)?.value || "";
   const parsed = parseSignedSession(raw);
   if (!parsed) return false;
-  return parsed.payload === expectedUsername && parsed.signature === sign(parsed.payload);
+  if (parsed.signature !== sign(parsed.payload)) return false;
+  if (parsed.payload.startsWith(PROCESSOR1_USER_SESSION_PREFIX)) return true;
+  if (expectedUsername) return parsed.payload === expectedUsername;
+  return true;
 }
 
 export function setProcessor2Session(username: string) {
   const value = `${username}.${sign(username)}`;
+  cookies().set(PROCESSOR2_SESSION_COOKIE, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 14,
+  });
+}
+
+export function setProcessor2SessionForUser(userId: string) {
+  const payload = `${PROCESSOR2_USER_SESSION_PREFIX}${userId}`;
+  const value = `${payload}.${sign(payload)}`;
   cookies().set(PROCESSOR2_SESSION_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",
@@ -100,11 +130,40 @@ export function clearProcessor2Session() {
   });
 }
 
-export function isProcessor2Authed(expectedUsername: string): boolean {
+export function isProcessor2Authed(expectedUsername?: string): boolean {
   const raw = cookies().get(PROCESSOR2_SESSION_COOKIE)?.value || "";
   const parsed = parseSignedSession(raw);
   if (!parsed) return false;
-  return parsed.payload === expectedUsername && parsed.signature === sign(parsed.payload);
+  if (parsed.signature !== sign(parsed.payload)) return false;
+  if (parsed.payload.startsWith(PROCESSOR2_USER_SESSION_PREFIX)) return true;
+  if (expectedUsername) return parsed.payload === expectedUsername;
+  return true;
+}
+
+export function getProcessor1SessionInfo(): { userId: string | null; actorKey: string } | null {
+  const raw = cookies().get(PROCESSOR1_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(raw);
+  if (!parsed) return null;
+  if (parsed.signature !== sign(parsed.payload)) return null;
+  if (parsed.payload.startsWith(PROCESSOR1_USER_SESSION_PREFIX)) {
+    const userId = parsed.payload.slice(PROCESSOR1_USER_SESSION_PREFIX.length).trim();
+    if (!userId) return null;
+    return { userId, actorKey: `processor1:${userId}` };
+  }
+  return { userId: null, actorKey: "processor1" };
+}
+
+export function getProcessor2SessionInfo(): { userId: string | null; actorKey: string } | null {
+  const raw = cookies().get(PROCESSOR2_SESSION_COOKIE)?.value || "";
+  const parsed = parseSignedSession(raw);
+  if (!parsed) return null;
+  if (parsed.signature !== sign(parsed.payload)) return null;
+  if (parsed.payload.startsWith(PROCESSOR2_USER_SESSION_PREFIX)) {
+    const userId = parsed.payload.slice(PROCESSOR2_USER_SESSION_PREFIX.length).trim();
+    if (!userId) return null;
+    return { userId, actorKey: `processor2:${userId}` };
+  }
+  return { userId: null, actorKey: "processor2" };
 }
 
 /* =========================

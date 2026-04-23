@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isAdminAuthed, isProcessor2Authed } from "@/lib/auth";
+import { getProcessor2SessionInfo, isAdminAuthed, isProcessor2Authed } from "@/lib/auth";
+import { recordProcessor2FilingEmail } from "@/lib/processorCompensationLedger";
 import { findUserForFilingCompleteNotifyByEmail } from "@/lib/admin/findUserForFilingCompleteNotify";
 import { buildFilingCompleteNotifyEmail, firstNameFromFullName } from "@/lib/email/filingCompleteNotifyEmail";
 import { sendMail } from "@/lib/email/mailer";
 import { smtpSendContext } from "@/lib/smtpSendContext";
-import { getProcessor2Credentials } from "@/lib/siteSettings";
 
 const Body = z.object({
   email: z.string().email(),
 });
 
 export async function POST(req: Request) {
-  const processor2 = await getProcessor2Credentials();
-  if (!isAdminAuthed() && !isProcessor2Authed(processor2.username)) {
+  if (!isAdminAuthed() && !isProcessor2Authed()) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +28,7 @@ export async function POST(req: Request) {
   }
 
   const firstName = firstNameFromFullName(user.fullName);
-  const { subject, textBody, htmlBody } = buildFilingCompleteNotifyEmail(firstName);
+  const { subject, textBody, htmlBody } = await buildFilingCompleteNotifyEmail(firstName);
   const mailCtx = smtpSendContext();
   const sentAt = new Date();
 
@@ -49,6 +48,15 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error("FILING_COMPLETE_NOTIFY_LOG_FAILED:", e);
+  }
+
+  try {
+    const actorKey = getProcessor2SessionInfo()?.actorKey;
+    if (actorKey) {
+      await recordProcessor2FilingEmail({ targetUserId: user.id, processorActorKey: actorKey });
+    }
+  } catch (ledgerErr) {
+    console.error("PROCESSOR_COMPENSATION_LEDGER_FILING_EMAIL", ledgerErr);
   }
 
   return NextResponse.json({ ok: true, to: user.email, lastSentAt: sentAt.toISOString() });

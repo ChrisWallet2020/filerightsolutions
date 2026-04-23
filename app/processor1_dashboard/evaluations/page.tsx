@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { isProcessor1Authed } from "@/lib/auth";
 import { getProcessor1Credentials } from "@/lib/siteSettings";
 import { redirect } from "next/navigation";
+import { SubmittedClientNameSearch } from "@/components/admin/SubmittedClientNameSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -47,11 +48,19 @@ export default async function Processor1EvaluationsPage({
       evaluation: { include: { user: true } },
     },
   });
+  const submittedClientOptions = Array.from(
+    new Map(
+      allSubs.map((s) => {
+        const fullName = s.evaluation.user.fullName.trim();
+        const email = s.evaluation.user.email.trim();
+        return [email.toLowerCase(), { fullName, email }];
+      }),
+    ).values(),
+  ).sort((a, b) => a.fullName.localeCompare(b.fullName, "en-PH", { sensitivity: "base" }));
   const subs = query
     ? allSubs.filter((s) => {
         const name = s.evaluation.user.fullName.toLowerCase();
-        const email = s.evaluation.user.email.toLowerCase();
-        return name.includes(query) || email.includes(query);
+        return name.includes(query);
       })
     : allSubs;
   const downloadedCount = subs.filter((s) => isProcessor1EvalPdfDownloadCurrent(s) && s.processor1PdfDownloadedAt)
@@ -68,62 +77,15 @@ export default async function Processor1EvaluationsPage({
         style={{
           marginTop: 12,
           display: "flex",
-          flexWrap: "nowrap",
+          flexWrap: "wrap",
           alignItems: "center",
           gap: 8,
           width: "100%",
-          maxWidth: "100%",
-          overflowX: "auto",
+          maxWidth: 900,
+          overflow: "visible",
         }}
       >
-        <form
-          method="get"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            flexWrap: "nowrap",
-            alignItems: "center",
-            gap: 8,
-            flex: "0 0 auto",
-          }}
-        >
-          <input
-            type="search"
-            name="q"
-            defaultValue={rawQuery}
-            placeholder="Search client name or email"
-            style={{
-              width: 360,
-              minWidth: 360,
-              maxWidth: 360,
-              minHeight: 42,
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #cbd5e1",
-              background: "#fff",
-              color: "#0f172a",
-              fontSize: 14,
-              boxSizing: "border-box",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              flex: "0 0 auto",
-              whiteSpace: "nowrap",
-              minHeight: 42,
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid #cbd5e1",
-              background: "#f8fafc",
-              color: "#0f172a",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Search
-          </button>
-        </form>
+        <SubmittedClientNameSearch options={submittedClientOptions} defaultValue={rawQuery} />
       </div>
       <section style={{ marginTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         <form action="/api/admin/evaluations/download-all" method="get">

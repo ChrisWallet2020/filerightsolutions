@@ -14,8 +14,8 @@ export default async function Processor2FilingCompleteEmailPage() {
     <section className="section">
       <h1>Filing confirmation email</h1>
       <p className="muted adminPageIntro">
-        Send the standard “filing processed” notice to a client who has <b>paid</b> and <b>submitted</b> a 1701A
-        evaluation. Preview the HTML version, then send when ready (sign-in email is used for delivery).
+        Send the standard “filing processed” notice to a client who has paid for our service. Preview the HTML version,
+        then send when ready (sign-in email is used for delivery).
       </p>
       <FilingCompleteEmailForm clients={clients} />
     </section>

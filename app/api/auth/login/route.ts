@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(u, 303);
     }
 
+    if (user.role === "PROCESSOR1" || user.role === "PROCESSOR2") {
+      const u = request.nextUrl.clone();
+      u.pathname = user.role === "PROCESSOR1" ? "/processor1_dashboard/login" : "/processor2_dashboard/login";
+      u.search = "";
+      u.searchParams.set("error", "processor_account");
+      return NextResponse.redirect(u, 303);
+    }
+
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return NextResponse.redirect(loginUrlWithError(request, "invalid", nextPath), 303);
 

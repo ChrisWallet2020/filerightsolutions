@@ -96,6 +96,13 @@ function overpayLabel(v: unknown): string {
   return m[k] || k || "—";
 }
 
+function overpayLabelForRenderMode(renderMode: PdfRenderMode, v: unknown): string {
+  if (renderMode === "processed") {
+    return "To be carried over as a tax credit for next year/quarter";
+  }
+  return overpayLabel(v);
+}
+
 function part4Cell(p: AnyObj, no: number, side: "A" | "B"): string {
   const o = p.part4;
   const k = `${no}${side}`;
@@ -259,7 +266,7 @@ function drawParagraph(
   return y;
 }
 
-function drawFormHeader(page: PDFPage, font: PDFFont, fontBold: PDFFont, pageNum: 1 | 2, yStart: number): number {
+function drawFormHeader(page: PDFPage, font: PDFFont, fontBold: PDFFont, pageNum: number, yStart: number): number {
   let y = yStart;
   const outerW = PAGE_W - 2 * M;
   const outerH = 96;
@@ -468,6 +475,98 @@ function drawPart1FormLikeRows(
   }
 
   return y;
+}
+
+function drawPart2DeclarationBox(
+  page: PDFPage,
+  font: PDFFont,
+  fontBold: PDFFont,
+  yStart: number,
+  printedNameSignature: string,
+): number {
+  const boxW = MAX_W;
+  const headerH = 44;
+  const bodyH = 56;
+  const totalH = headerH + bodyH;
+  const leftW = boxW - 165;
+  const topY = yStart;
+  const bottomY = topY - totalH;
+
+  // Outer border
+  page.drawRectangle({
+    x: M,
+    y: bottomY,
+    width: boxW,
+    height: totalH,
+    borderColor: GRID,
+    borderWidth: 1,
+  });
+  // Split between header and body
+  page.drawLine({
+    start: { x: M, y: topY - headerH },
+    end: { x: M + boxW, y: topY - headerH },
+    color: GRID,
+    thickness: 1,
+  });
+  // Right column for item 31
+  page.drawLine({
+    start: { x: M + leftW, y: bottomY },
+    end: { x: M + leftW, y: topY - headerH },
+    color: GRID,
+    thickness: 1,
+  });
+
+  const declText =
+    "I declare under the penalties of perjury that this return, and all its attachments, have been made in good faith, verified by me, and to the best of my knowledge and belief, are true and correct pursuant to the provisions of the National Internal Revenue Code, as amended, and the regulations issued under authority thereof.";
+  const declLines = wrapLine(font, declText, 8);
+  let y = topY - 12;
+  for (const line of declLines) {
+    if (y < topY - headerH + 6) break;
+    page.drawText(line, { x: M + 6, y, size: 8, font });
+    y -= 9;
+  }
+
+  // Signature line + typed name
+  const lineY = bottomY + 24;
+  page.drawLine({
+    start: { x: M + 10, y: lineY },
+    end: { x: M + leftW - 10, y: lineY },
+    color: rgb(0.1, 0.12, 0.16),
+    thickness: 0.8,
+  });
+  const typed = str(printedNameSignature);
+  if (typed) {
+    const tw = font.widthOfTextAtSize(typed, 9);
+    page.drawText(typed, {
+      x: M + Math.max(12, (leftW - tw) / 2),
+      y: lineY + 6,
+      size: 9,
+      font,
+    });
+  }
+  const caption = "Printed Name and Signature of Taxpayer/Authorized Representative & TIN";
+  const cw = font.widthOfTextAtSize(caption, 8);
+  page.drawText(caption, {
+    x: M + Math.max(8, (leftW - cw) / 2),
+    y: bottomY + 10,
+    size: 8,
+    font,
+  });
+
+  // Item 31 block
+  page.drawText("31", { x: M + leftW + 16, y: bottomY + 30, size: 9, font: fontBold });
+  page.drawText("Number of Attachments", { x: M + leftW + 34, y: bottomY + 30, size: 9, font });
+  page.drawRectangle({
+    x: M + leftW + 136,
+    y: bottomY + 26,
+    width: 18,
+    height: 14,
+    borderColor: GRID,
+    borderWidth: 1,
+  });
+  page.drawText("0", { x: M + leftW + 143, y: bottomY + 30, size: 9, font });
+
+  return bottomY - 10;
 }
 
 function drawSectionBand(page: PDFPage, fontBold: PDFFont, label: string, yStart: number): number {
@@ -976,43 +1075,63 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
     y
   );
   y -= 6;
-  y = rowPair(p2, font, "Overpayment option (if applicable) — mark one", overpayLabel(payload.overpaymentOption), y);
+  y = rowPair(
+    p2,
+    font,
+    "Overpayment option (if applicable) — mark one",
+    overpayLabelForRenderMode(renderMode, payload.overpaymentOption),
+    y,
+  );
   y -= 8;
+  y = drawPart2DeclarationBox(p2, font, fontBold, y, str(payload.printedNameSignature));
+  y -= 2;
 
   if (hasPart4Object(payload)) {
+    const part4ABSections = PART4_SECTIONS.filter((s) => s.id === "IV.A" || s.id === "IV.B");
+    const part4TailSections = PART4_SECTIONS.filter((s) => s.id === "IV.C" || s.id === "IV.65");
+
     y = drawSectionBand(p2, fontBold, "PART IV — COMPUTATION OF INCOME TAX (AS FILED)", y);
     y = drawParagraph(
       p2,
       font,
       renderMode === "verbatim"
-        ? "Items 36–65: values are shown exactly as entered on the portal (no computed overrides)."
-        : "Items 36–65: columns A) Taxpayer/Filer and B) Spouse as submitted. Spouse column may be blank if not applicable.",
+        ? "Items 36–56: values are shown exactly as entered on the portal (no computed overrides)."
+        : "Items 36–56: columns A) Taxpayer/Filer and B) Spouse as submitted. Spouse column may be blank if not applicable.",
       8,
       y,
       LINE_SMALL
     );
     y -= 2;
-    y = drawPart4Sections(p2, font, fontBold, payload, PART4_SECTIONS, y, renderMode);
-
-    // Keep a visible gap between final Part IV row (e.g., item 65) and Declaration.
-    y -= 12;
-    if (y < 86) y = 86;
-    p2.drawText("Declaration", { x: M, y, size: 9, font: fontBold });
-    y -= LINE_SMALL + 2;
-    const declOk = Boolean(payload.declarationAccepted);
-    y = drawParagraph(
-      p2,
-      font,
-      declOk
-        ? "Taxpayer confirmed the portal declaration and that values match the filed Form 1701A."
-        : "Declaration not marked as accepted on submission record.",
-      8,
-      y,
-      LINE_SMALL
-    );
+    y = drawPart4Sections(p2, font, fontBold, payload, part4ABSections, y, renderMode);
 
     p2.drawText("— End of Page 2 —", { x: M, y: 26, size: 8, font });
     p2.drawText(footerNote, {
+      x: M,
+      y: 14,
+      size: 7,
+      font,
+    });
+
+    // —— Page 3 — Remaining Part IV sections (IV.C and item 65) ——
+    const p3 = pdfDoc.addPage([PAGE_W, PAGE_H]);
+    let y3 = PAGE_H - M;
+    y3 = drawFormHeader(p3, font, fontBold, 3, y3);
+    y3 = drawResubmitNotice(p3, font, y3, options?.submit1701aCount);
+    y3 = drawSectionBand(p3, fontBold, "PART IV — COMPUTATION OF INCOME TAX (CONTINUED)", y3);
+    y3 = drawParagraph(
+      p3,
+      font,
+      renderMode === "verbatim"
+        ? "Items 57–65: values are shown exactly as entered on the portal (no computed overrides)."
+        : "Items 57–65: columns A) Taxpayer/Filer and B) Spouse as submitted. Spouse column may be blank if not applicable.",
+      8,
+      y3,
+      LINE_SMALL
+    );
+    y3 -= 2;
+    y3 = drawPart4Sections(p3, font, fontBold, payload, part4TailSections, y3, renderMode);
+    p3.drawText("— End of Page 3 —", { x: M, y: 26, size: 8, font });
+    p3.drawText(footerNote, {
       x: M,
       y: 14,
       size: 7,
@@ -1045,21 +1164,6 @@ export async function generate1701aPdf(payload: AnyObj, options?: Generate1701aP
       y = rowPair(p2, font, label, val, y);
       if (y < 200) break;
     }
-
-    y -= 8;
-    p2.drawText("Declaration", { x: M, y, size: 9, font: fontBold });
-    y -= LINE_SMALL + 2;
-    const declOk = Boolean(payload.declarationAccepted);
-    y = drawParagraph(
-      p2,
-      font,
-      declOk
-        ? "Taxpayer confirmed the portal declaration and that values match the filed Form 1701A."
-        : "Declaration not marked as accepted on submission record.",
-      8,
-      y,
-      LINE_SMALL
-    );
 
     p2.drawText("— End of Page 2 —", { x: M, y: 26, size: 8, font });
     p2.drawText(footerNote, {

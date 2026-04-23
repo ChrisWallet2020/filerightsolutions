@@ -4,17 +4,7 @@ import { prisma } from "@/lib/db";
 import { config } from "@/lib/config";
 import { customerHasPaidService, processAgentReferralPipeline } from "@/lib/agentReferralsSync";
 import { sendMail } from "@/lib/email/mailer";
-import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
-import {
-  BILLING_EMAIL_FOOTER_TEXT,
-  billingEmailFooterHtml,
-  emailParagraphHtml,
-  emailSignatureHtml,
-  emailSignatureText,
-  escapeHtml,
-  joinTextParagraphs,
-  wrapEmailMainHtml,
-} from "@/lib/email/formatting";
+import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
 
 function makeReferralCode(): string {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -131,47 +121,18 @@ export async function POST(req: Request) {
     }
 
     const loginUrl = `${String(config.baseUrl).replace(/\/$/, "")}/login`;
-    const subject = "Welcome to FileRight Solutions - Account Created";
-    const textBody = joinTextParagraphs([
-      `Hello ${fullName},`,
-      `Thank you for creating your account with ${config.siteName}.`,
-      `Your registration is complete. You may now sign in using the link below:\n${loginUrl}`,
-      `Sign-in email: ${email}\nUse the password you created during registration.`,
-      `If you did not create this account, you may safely ignore this message.`,
-      emailSignatureText("Reiner"),
-      `Questions? Reply to this message or contact ${config.supportEmail}.`,
-      BILLING_EMAIL_FOOTER_TEXT,
-    ]);
-
-    const safeLoginUrl = escapeHtml(loginUrl);
-    const htmlBody = wrapEmailMainHtml(
-      [
-        emailParagraphHtml(`Hello ${escapeHtml(fullName)},`),
-        emailParagraphHtml(
-          `Thank you for creating your account with <strong>${escapeHtml(config.siteName)}</strong>.`
-        ),
-        emailParagraphHtml("Your registration is complete. You may now sign in using the link below:"),
-        emailParagraphHtml(`<a href="${safeLoginUrl}">Sign in to continue</a>`),
-        emailParagraphHtml(
-          `Or copy this link: <a href="${safeLoginUrl}" style="word-break:break-all;">${safeLoginUrl}</a>`
-        ),
-        emailParagraphHtml(
-          `Sign in with <strong>${escapeHtml(email)}</strong> and the password you created during registration.`
-        ),
-        emailSignatureHtml("Reiner"),
-        `<p style="margin:16px 0 0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;line-height:1.55;color:#475569;">Questions? Reply to this message or contact <a href="mailto:${escapeHtml(config.supportEmail)}" style="color:#1e40af;font-weight:600;text-decoration:none;border-bottom:1px solid #cbd5e1;">${escapeHtml(config.supportEmail)}</a>.</p>`,
-        emailParagraphHtml(
-          `<span style="color:#64748b;font-size:13px;">If you did not create this account, you may safely ignore this message.</span>`
-        ),
-        billingEmailFooterHtml(),
-      ].join(""),
-      clientEmailBranding()
-    );
+    const tpl = await renderClientEmailTemplate("REGISTER_WELCOME", {
+      fullName,
+      siteName: config.siteName,
+      loginUrl,
+      email,
+      supportEmail: config.supportEmail,
+    });
 
     const next = new URL("/register/email-sent", req.url);
     next.searchParams.set("email", email);
     try {
-      await sendMail(email, subject, textBody, htmlBody);
+      await sendMail(email, tpl.subject, tpl.textBody, tpl.htmlBody);
     } catch (mailErr) {
       console.error("REGISTER_CONFIRM_EMAIL_FAILED:", mailErr);
       next.searchParams.set("mail", "failed");

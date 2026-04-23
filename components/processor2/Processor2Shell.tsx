@@ -7,15 +7,21 @@ type NavItem = { href: string; label: string };
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/processor2_dashboard/evaluations", label: "Evaluations" },
+  { href: "/processor2_dashboard/quote", label: "Quote" },
   { href: "/processor2_dashboard/filing-complete-email", label: "Filing email" },
+  { href: "/processor2_dashboard/income-tracker", label: "Income tracker" },
+  { href: "/processor2_dashboard/tools", label: "Tools" },
 ];
 
 export function Processor2Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isLoginPage =
+    pathname === "/processor2_dashboard/login" || pathname === "/processor2_dashboard/login/";
 
   return (
-    <div className="adminShell">
+    <div className={`adminShell${isLoginPage ? " adminShell--processorLogin" : ""}`}>
+      {!isLoginPage ? (
       <aside className="adminNav">
         <div className="adminTitleWrap">
           <div className="adminTitle">Processor2 Workspace</div>
@@ -39,7 +45,8 @@ export function Processor2Shell({ children }: { children: React.ReactNode }) {
           </button>
         </form>
       </aside>
-      <div className="adminMain">{children}</div>
+      ) : null}
+      <div className={`adminMain${isLoginPage ? " adminMain--processorLogin" : ""}`}>{children}</div>
     </div>
   );
 }

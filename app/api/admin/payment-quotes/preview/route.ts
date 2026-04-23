@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isAdminAuthed } from "@/lib/auth";
-import { config } from "@/lib/config";
 import {
-  collectBillingImagesFromFormData,
-  type CollectedBillingImage,
-} from "@/lib/admin/billingAttachments";
+  isPaymentQuoteOperatorAuthed,
+  paymentQuoteReturnUrl,
+  quoteSlotRoleFromRequest,
+} from "@/lib/admin/paymentQuoteAccess";
+import { config } from "@/lib/config";
+import type { CollectedBillingImage } from "@/lib/admin/billingAttachments";
+import {
+  isStagingReadyForSidePreview,
+  loadStagingSlotsForPreview,
+} from "@/lib/admin/paymentQuoteStaging";
 import { computeQuotedPaymentTotals } from "@/lib/quotedPaymentTotals";
 import { buildBillingQuoteEmail } from "@/lib/email/billingQuoteEmail";
 import { findUserWith1701aSubmissionByEmail } from "@/lib/admin/findUserWith1701aSubmission";
@@ -16,6 +21,20 @@ import { clientPaymentNoticePath } from "@/lib/clientPaymentFlow";
 const Schema = z.object({
   userEmail: z.string().email(),
   clientNote: z.string().max(2000).optional().or(z.literal("")),
+  serviceFeeOverridePhp: z
+    .union([z.string(), z.number(), z.undefined()])
+    .transform((value) => {
+      if (value == null) return null;
+      const raw = typeof value === "number" ? String(value) : value.trim();
+      if (!raw) return null;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || !Number.isInteger(n)) return Number.NaN;
+      return n;
+    })
+    .refine((value) => value === null || (Number.isInteger(value) && value >= 1 && value <= 1_000_000), {
+      message: "service_fee_override_must_be_integer_php_1_to_1000000",
+    })
+    .optional(),
 });
 
 function esc(s: string) {
@@ -26,40 +45,24 @@ function esc(s: string) {
     .replace(/"/g, "&quot;");
 }
 
-function attachmentToText(content: Buffer | Uint8Array): string {
-  return Buffer.isBuffer(content) ? content.toString("utf-8") : Buffer.from(content).toString("utf-8");
-}
-
 function redirectBillingError(req: Request, code: string) {
-  const url = new URL("/admin_dashboard/billing", req.url);
+  const url = new URL(paymentQuoteReturnUrl(req), req.url);
   url.searchParams.set("previewError", code);
   return NextResponse.redirect(url, 303);
 }
 
 export async function POST(req: Request) {
-  if (!isAdminAuthed()) {
+  if (!(await isPaymentQuoteOperatorAuthed())) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
   const ct = req.headers.get("content-type") || "";
   let raw: Record<string, unknown>;
-  let uploadedImages: CollectedBillingImage[] = [];
   if (ct.includes("application/json")) {
     raw = await req.json().catch(() => ({}));
   } else {
     const form = await req.formData();
     raw = Object.fromEntries(form.entries());
-    const imgResult = await collectBillingImagesFromFormData(form);
-    if (imgResult.ok === false) {
-      const msg =
-        imgResult.error === "attachment_type"
-          ? "Images must be image files."
-          : "Each image must be 10MB or smaller.";
-      return ct.includes("application/json")
-        ? new NextResponse(msg, { status: 400 })
-        : redirectBillingError(req, imgResult.error);
-    }
-    uploadedImages = imgResult.images;
   }
 
   const parsed = Schema.safeParse(raw);
@@ -69,7 +72,7 @@ export async function POST(req: Request) {
       : redirectBillingError(req, "invalid_form");
   }
 
-  const { userEmail, clientNote } = parsed.data;
+  const { userEmail, clientNote, serviceFeeOverridePhp } = parsed.data;
   const email = userEmail.trim().toLowerCase();
   const eligible = await findUserWith1701aSubmissionByEmail(email);
   if (!eligible) {
@@ -85,7 +88,28 @@ export async function POST(req: Request) {
       : redirectBillingError(req, code);
   }
   const user = eligible;
-  const baseAmountPhp = await getAutoBillingBaseAmountForUser(user.id);
+
+  const slotRole = quoteSlotRoleFromRequest(req);
+  if (!(await isStagingReadyForSidePreview(email, slotRole))) {
+    return ct.includes("application/json")
+      ? new NextResponse(
+          "Upload the required quote images for this workspace before preview.",
+          { status: 400 },
+        )
+      : redirectBillingError(req, "preview_side_incomplete");
+  }
+
+  const slotRows = await loadStagingSlotsForPreview(email);
+  const uploadedImages: CollectedBillingImage[] = slotRows
+    .filter((r): r is { slot: number; image: CollectedBillingImage } => "image" in r)
+    .map((r) => r.image);
+
+  const canOverrideFee = quoteSlotRoleFromRequest(req) === "admin";
+  const autoBaseAmountPhp = await getAutoBillingBaseAmountForUser(user.id);
+  const baseAmountPhp =
+    canOverrideFee && typeof serviceFeeOverridePhp === "number"
+      ? serviceFeeOverridePhp
+      : autoBaseAmountPhp;
   const confirmedCredits = await prisma.referralEvent.count({
     where: { referrerId: user.id, evaluationCompleted: true },
   });
@@ -94,7 +118,7 @@ export async function POST(req: Request) {
   const baseUrl = String(config.baseUrl).replace(/\/$/, "");
   const payUrl = `${baseUrl}${clientPaymentNoticePath("PREVIEW_TOKEN")}`;
 
-  const built = buildBillingQuoteEmail({
+  const built = await buildBillingQuoteEmail({
     clientFullName: user.fullName.trim() || "Client",
     baseAmountPhp: totals.baseAmountPhp,
     discountPhp: totals.discountPhp,
@@ -106,27 +130,29 @@ export async function POST(req: Request) {
     expiresAt: null,
   });
 
-  const summaryAttachment = built.attachments[0];
-  const summaryText = summaryAttachment ? attachmentToText(summaryAttachment.content) : "(no summary)";
   const attachmentList = [
-    ...uploadedImages.map((a) => a.filename),
-    summaryAttachment?.filename || "summary.txt",
+    ...slotRows.map((row) =>
+      "missing" in row ? `Image ${row.slot} (pending)` : row.image.filename,
+    ),
   ];
-  const imageBlocks = uploadedImages
-    .map(
-      (img) =>
-        `<div class="card" style="margin-bottom:12px;"><p><b>${esc(img.filename)}</b></p><img src="data:${esc(
-          img.contentType || "image/png"
-        )};base64,${Buffer.from(img.content).toString("base64")}" alt="" style="max-width:100%;height:auto;border-radius:8px;" /></div>`
+  const imageBlocks = slotRows
+    .map((row) =>
+      "missing" in row
+        ? `<div class="card muted" style="margin-bottom:12px;"><p><b>Image ${row.slot}</b></p><p>Not uploaded yet — final email will include this attachment only after all four images are staged.</p></div>`
+        : `<div class="card" style="margin-bottom:12px;"><p><b>${esc(row.image.filename)}</b></p><img src="data:${esc(
+            row.image.contentType || "image/png"
+          )};base64,${Buffer.from(row.image.content as Buffer).toString("base64")}" alt="" style="max-width:100%;height:auto;border-radius:8px;" /></div>`,
     )
     .join("");
+
+  const quoteReturnPath = paymentQuoteReturnUrl(req);
 
   const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Billing Email Preview</title>
+  <title>Quote Email Preview</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
     h1 { margin: 0 0 16px; font-size: 22px; }
@@ -138,13 +164,10 @@ export async function POST(req: Request) {
     iframe { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
     .emailHtmlFrame { min-height: 480px; margin-top: 4px; display: block; }
     .topline { margin-bottom: 8px; }
-    .backBtn { display: inline-block; margin: 0 0 12px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; text-decoration: none; color: #0f172a; font-size: 13px; font-weight: 600; background: #fff; }
   </style>
 </head>
 <body>
-  <a class="backBtn" href="/admin_dashboard/billing">← Back to Billing</a>
-  <span class="muted" style="margin-left:10px;">Tip: you can close this tab — the form stays open in the other tab.</span>
-  <h1>Billing Email Preview</h1>
+  <h1>Quote Email Preview</h1>
   <div class="muted topline">No email sent. No quote created. This is a content preview only.</div>
   <div class="card">
     <div><b>To:</b> ${esc(user.email)}</div>
@@ -153,15 +176,13 @@ export async function POST(req: Request) {
   </div>
   <iframe class="emailHtmlFrame" srcdoc="${esc(built.htmlBody)}"></iframe>
   <div class="divider"></div>
-  <h2>Your billing images (as sent)</h2>
+  <h2>Quote images (preview)</h2>
+  <p class="muted" style="margin:0 0 12px;">Send still requires all four images. Empty slots show as pending below.</p>
   ${
-    uploadedImages.length
+    uploadedImages.length || slotRows.some((r) => "missing" in r)
       ? imageBlocks
       : `<div class="card muted">No images attached.</div>`
   }
-  <div class="divider"></div>
-  <h2>Billing summary file (.txt)</h2>
-  <div class="card"><pre>${esc(summaryText)}</pre></div>
 </body>
 </html>`;
 

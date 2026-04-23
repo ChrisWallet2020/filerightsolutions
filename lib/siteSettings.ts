@@ -8,6 +8,14 @@ const PROCESSOR1_USERNAME_KEY = "PROCESSOR1_USERNAME";
 const PROCESSOR1_PASSWORD_KEY = "PROCESSOR1_PASSWORD";
 const PROCESSOR2_USERNAME_KEY = "PROCESSOR2_USERNAME";
 const PROCESSOR2_PASSWORD_KEY = "PROCESSOR2_PASSWORD";
+const PROCESSOR1_PAYOUT_METHOD_KEY = "PROCESSOR1_PAYOUT_METHOD";
+const PROCESSOR1_PAYOUT_PROVIDER_KEY = "PROCESSOR1_PAYOUT_PROVIDER";
+const PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY = "PROCESSOR1_PAYOUT_ACCOUNT_NAME";
+const PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY = "PROCESSOR1_PAYOUT_ACCOUNT_NUMBER";
+const PROCESSOR2_PAYOUT_METHOD_KEY = "PROCESSOR2_PAYOUT_METHOD";
+const PROCESSOR2_PAYOUT_PROVIDER_KEY = "PROCESSOR2_PAYOUT_PROVIDER";
+const PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY = "PROCESSOR2_PAYOUT_ACCOUNT_NAME";
+const PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY = "PROCESSOR2_PAYOUT_ACCOUNT_NUMBER";
 
 function normalizeLimitInput(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -148,4 +156,121 @@ export async function setProcessor2Credentials(username: string, password: strin
       update: { value: normalizedPassword },
     }),
   ]);
+}
+
+export type ProcessorPayoutMethod = "online_banking" | "e_wallet";
+
+export type ProcessorPayoutDetails = {
+  method: ProcessorPayoutMethod;
+  provider: string;
+  accountName: string;
+  accountNumber: string;
+};
+
+function normalizePayoutText(raw: string | null | undefined): string {
+  return (raw || "").trim();
+}
+
+function normalizePayoutMethod(raw: string | null | undefined): ProcessorPayoutMethod {
+  return raw === "online_banking" ? "online_banking" : "e_wallet";
+}
+
+async function getProcessorPayoutDetails(keys: {
+  method: string;
+  provider: string;
+  accountName: string;
+  accountNumber: string;
+}): Promise<ProcessorPayoutDetails> {
+  const rows = await prisma.siteSetting.findMany({
+    where: { key: { in: [keys.method, keys.provider, keys.accountName, keys.accountNumber] } },
+    select: { key: true, value: true },
+  });
+
+  let method: ProcessorPayoutMethod = "e_wallet";
+  let provider = "";
+  let accountName = "";
+  let accountNumber = "";
+  for (const row of rows) {
+    if (row.key === keys.method) method = normalizePayoutMethod(row.value);
+    if (row.key === keys.provider) provider = normalizePayoutText(row.value);
+    if (row.key === keys.accountName) accountName = normalizePayoutText(row.value);
+    if (row.key === keys.accountNumber) accountNumber = normalizePayoutText(row.value);
+  }
+
+  return { method, provider, accountName, accountNumber };
+}
+
+async function setProcessorPayoutDetails(
+  keys: { method: string; provider: string; accountName: string; accountNumber: string },
+  details: ProcessorPayoutDetails
+): Promise<void> {
+  const method = normalizePayoutMethod(details.method);
+  const provider = normalizePayoutText(details.provider);
+  const accountName = normalizePayoutText(details.accountName);
+  const accountNumber = normalizePayoutText(details.accountNumber);
+
+  await prisma.$transaction([
+    prisma.siteSetting.upsert({
+      where: { key: keys.method },
+      create: { key: keys.method, value: method },
+      update: { value: method },
+    }),
+    prisma.siteSetting.upsert({
+      where: { key: keys.provider },
+      create: { key: keys.provider, value: provider },
+      update: { value: provider },
+    }),
+    prisma.siteSetting.upsert({
+      where: { key: keys.accountName },
+      create: { key: keys.accountName, value: accountName },
+      update: { value: accountName },
+    }),
+    prisma.siteSetting.upsert({
+      where: { key: keys.accountNumber },
+      create: { key: keys.accountNumber, value: accountNumber },
+      update: { value: accountNumber },
+    }),
+  ]);
+}
+
+export async function getProcessor1PayoutDetails(): Promise<ProcessorPayoutDetails> {
+  return getProcessorPayoutDetails({
+    method: PROCESSOR1_PAYOUT_METHOD_KEY,
+    provider: PROCESSOR1_PAYOUT_PROVIDER_KEY,
+    accountName: PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY,
+    accountNumber: PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY,
+  });
+}
+
+export async function setProcessor1PayoutDetails(details: ProcessorPayoutDetails): Promise<void> {
+  await setProcessorPayoutDetails(
+    {
+      method: PROCESSOR1_PAYOUT_METHOD_KEY,
+      provider: PROCESSOR1_PAYOUT_PROVIDER_KEY,
+      accountName: PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY,
+      accountNumber: PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY,
+    },
+    details
+  );
+}
+
+export async function getProcessor2PayoutDetails(): Promise<ProcessorPayoutDetails> {
+  return getProcessorPayoutDetails({
+    method: PROCESSOR2_PAYOUT_METHOD_KEY,
+    provider: PROCESSOR2_PAYOUT_PROVIDER_KEY,
+    accountName: PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY,
+    accountNumber: PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY,
+  });
+}
+
+export async function setProcessor2PayoutDetails(details: ProcessorPayoutDetails): Promise<void> {
+  await setProcessorPayoutDetails(
+    {
+      method: PROCESSOR2_PAYOUT_METHOD_KEY,
+      provider: PROCESSOR2_PAYOUT_PROVIDER_KEY,
+      accountName: PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY,
+      accountNumber: PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY,
+    },
+    details
+  );
 }

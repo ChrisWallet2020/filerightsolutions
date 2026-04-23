@@ -153,6 +153,46 @@ main.publicPage .publicInsetBox {
   color: #0f172a;
 }
 
+/* Long-form policy pages now share the same visual rhythm as Services. */
+main.publicPage.policyPage .max-w-2xl {
+  max-width: 900px;
+}
+main.publicPage.policyPage h1 {
+  font-size: 36px;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  font-weight: 800;
+  color: #0f172a;
+}
+main.publicPage.policyPage h2 {
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+main.publicPage.policyPage p {
+  margin: 0 0 18px;
+  color: #475569;
+  line-height: 1.7;
+}
+main.publicPage.policyPage p:last-child {
+  margin-bottom: 0;
+}
+main.publicPage.policyPage ul {
+  margin: 0 0 18px;
+  padding-left: 18px;
+  line-height: 1.9;
+  color: #0f172a;
+}
+main.publicPage.policyPage ul > li {
+  margin-bottom: 10px;
+}
+main.publicPage.policyPage a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 .link { color: var(--primary); text-decoration: underline; }
@@ -378,6 +418,23 @@ a.btn:hover { filter: brightness(0.95); }
   min-height: 100vh;
   background: #f1f5f9;
 }
+/* Processor1/2 login: full-width column, no sidebar */
+.adminShell.adminShell--processorLogin {
+  grid-template-columns: 1fr;
+}
+.adminMain.adminMain--processorLogin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 20px 48px;
+}
+.adminMain.adminMain--processorLogin .section {
+  max-width: 420px;
+  width: 100%;
+  margin: 0;
+}
 .adminNav {
   border-right: 1px solid #dbe3ef;
   padding: 24px 18px;
@@ -580,6 +637,214 @@ a.btn:hover { filter: brightness(0.95); }
   border-color: #86efac;
   background: #f0fdf4;
   color: #14532d;
+}
+
+/* Processor income tracker + admin income rates */
+.incomeTracker {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.incomeTrackerHeader {
+  margin-bottom: 20px;
+}
+.adminMain .incomeTrackerTitle {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+.incomeTrackerSubtitle {
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.incomeTrackerRatesBanner {
+  margin-bottom: 22px;
+  border-radius: 14px;
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 45%, #f8fafc 100%);
+  box-shadow: 0 1px 2px rgba(30, 64, 175, 0.06);
+}
+.incomeTrackerRatesInner {
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+.incomeTrackerRatesLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4338ca;
+}
+.incomeTrackerRatesChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.incomeRateChip {
+  font-size: 13px;
+  color: #312e81;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+.incomeRateChip strong {
+  font-weight: 800;
+  margin-left: 4px;
+}
+.incomeStatGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.incomeStatCard {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.incomeStatCard--accent {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+}
+.incomeStatEyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.incomeStatValue {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+.incomeStatValue--muted {
+  color: #334155;
+}
+.incomeStatHint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+.incomeBreakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.incomeBreakdownCard {
+  margin: 0;
+}
+.incomeBreakdownTitle {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 750;
+  color: #0f172a;
+}
+.incomeBreakdownDl {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.incomeBreakdownDl dt {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.incomeBreakdownDl dd {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.incomeActivityCard {
+  margin: 0;
+}
+.incomePayoutCard {
+  margin: 0 0 18px;
+}
+.incomeTableWrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 320px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+.incomeTableWrap--adminIncome {
+  height: 320px;
+}
+.incomeTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.incomeTable th,
+.incomeTable td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+.incomeTable th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #475569;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.incomeTable tbody tr:last-child td {
+  border-bottom: none;
+}
+.incomeTableAmount {
+  font-weight: 700;
+  color: #14532d;
+  white-space: nowrap;
+}
+.incomeTableDetail {
+  word-break: break-word;
+  color: #334155;
+}
+.incomeRatesCard .incomeRatesInputRow {
+  display: flex;
+  align-items: stretch;
+  margin-top: 6px;
+}
+.incomeRatesPrefix {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  background: #f8fafc;
+  font-weight: 700;
+  color: #475569;
+}
+.incomeRatesInput {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0 10px 10px 0;
+  padding: 10px 12px;
+  font-size: 15px;
 }
 
 /* External agent dashboard (separate from admin shell) */

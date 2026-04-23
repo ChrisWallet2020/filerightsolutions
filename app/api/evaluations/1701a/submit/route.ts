@@ -9,12 +9,13 @@ import { sendMailWithAttachments } from "@/lib/email/mailer";
 import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import { config } from "@/lib/config";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
+import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
 import {
-  emailSignatureText,
   joinTextParagraphs,
   textToEmailHtmlParagraphs,
   wrapEmailMainHtml,
 } from "@/lib/email/formatting";
+import { unmarkQuoteRecipientEmailSent } from "@/lib/admin/quoteSentRecipients";
 
 type AnyObj = Record<string, unknown>;
 
@@ -66,17 +67,6 @@ function nextDayAtNineAM(start: Date): Date {
   const day = Number(parts.find((p) => p.type === "day")?.value || "1");
   // 9:00 AM Manila is 01:00 UTC (UTC+8, no DST)
   return new Date(Date.UTC(y, m - 1, day + 1, 1, 0, 0, 0));
-}
-
-function buildNoReductionEmailBody(customerName: string): string {
-  return joinTextParagraphs([
-    `Dear ${customerName},`,
-    "After reviewing your details, we found no meaningful tax reduction opportunity based on applicable rules and allowable adjustments.",
-    "At this level, the available deductions, credits, and optimization strategies typically result in minimal or no material difference in the final tax payable. As part of our commitment to transparency and value, we only recommend proceeding when there is a clear and beneficial outcome for you.",
-    "For this reason, we are unable to proceed with further processing at this time.",
-    "Thank you for your understanding and for considering our services.",
-    emailSignatureText("Reiner"),
-  ]);
 }
 
 function isGradOsdSelected(payload: AnyObj): boolean {
@@ -217,6 +207,9 @@ export async function POST(req: Request) {
       const customerEmail = evalRow.user?.email?.trim();
       const customerName = evalRow.user?.fullName?.trim() || "Client";
       if (customerEmail) {
+        const noReductionTpl = await renderClientEmailTemplate("EVALUATION_NO_REDUCTION_UPDATE", {
+          customerName,
+        });
         const existingQueued = await prisma.scheduledEmail.findFirst({
           where: {
             type: "EVALUATION_NO_REDUCTION_UPDATE",
@@ -232,8 +225,8 @@ export async function POST(req: Request) {
             data: {
               type: "EVALUATION_NO_REDUCTION_UPDATE",
               toEmail: customerEmail,
-              subject: "Update on Your Tax Evaluation",
-              body: buildNoReductionEmailBody(customerName),
+              subject: noReductionTpl.subject,
+              body: noReductionTpl.textBody,
               sendAt: nextDayAtNineAM(new Date()),
               evaluationId: evalRow.id,
               userId,
@@ -267,6 +260,9 @@ export async function POST(req: Request) {
         const customerEmail = evalRow.user?.email?.trim();
         const customerName = evalRow.user?.fullName?.trim() || "Client";
         if (customerEmail) {
+          const noReductionTpl = await renderClientEmailTemplate("EVALUATION_NO_REDUCTION_UPDATE", {
+            customerName,
+          });
           const existingQueued = await prisma.scheduledEmail.findFirst({
             where: {
               type: "EVALUATION_NO_REDUCTION_UPDATE",
@@ -283,8 +279,8 @@ export async function POST(req: Request) {
               data: {
                 type: "EVALUATION_NO_REDUCTION_UPDATE",
                 toEmail: customerEmail,
-                subject: "Update on Your Tax Evaluation",
-                body: buildNoReductionEmailBody(customerName),
+                subject: noReductionTpl.subject,
+                body: noReductionTpl.textBody,
                 sendAt: nextDayAtNineAM(new Date()),
                 evaluationId: evalRow.id,
                 userId,
@@ -384,6 +380,12 @@ export async function POST(req: Request) {
       });
     });
 
+    // Quote tab hides accounts after a successful quote email; a new submission should list them again.
+    const quoteListEmail = evalRow.user?.email?.trim();
+    if (quoteListEmail) {
+      await unmarkQuoteRecipientEmailSent(quoteListEmail).catch(() => {});
+    }
+
     // Keep outside the transaction: if the column is missing (DB not migrated), submit still succeeds.
     try {
       await prisma.$executeRaw`
@@ -452,19 +454,17 @@ Account email: ${evalRow.user?.email ?? "(unknown)"}`,
         });
 
         if (!existingQueued) {
+          const followupTpl = await renderClientEmailTemplate("EVALUATION_PAYMENT_FOLLOWUP", {
+            customerName,
+            paymentUrl,
+            siteName: config.siteName,
+          });
           await prisma.scheduledEmail.create({
             data: {
               type: "EVALUATION_PAYMENT_FOLLOWUP",
               toEmail: customerEmail,
-              subject: "Your 1701A evaluation is received — payment link",
-              body: joinTextParagraphs([
-                `Hello ${customerName},`,
-                `Thank you — we have received your BIR Form 1701A evaluation.`,
-                `Our team will review your submission and send the next steps; evaluation typically takes 24 hours to complete.`,
-                `When advised to proceed, open this link (sign in if asked — you will be returned to Payment):\n${paymentUrl}`,
-                `If you already have a billing link with a quote code in your email, use that link instead; it opens your bill after sign-in.`,
-                `${emailSignatureText("Reiner")}\n${config.siteName}`,
-              ]),
+              subject: followupTpl.subject,
+              body: followupTpl.textBody,
               sendAt,
               evaluationId: evalRow.id,
               userId: userId,

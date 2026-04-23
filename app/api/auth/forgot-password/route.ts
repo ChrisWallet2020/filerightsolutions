@@ -3,15 +3,7 @@ import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { sendMail } from "@/lib/email/mailer";
 import { config } from "@/lib/config";
-import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
-import {
-  emailParagraphHtml,
-  emailSignatureHtml,
-  emailSignatureText,
-  escapeHtml,
-  joinTextParagraphs,
-  wrapEmailMainHtml,
-} from "@/lib/email/formatting";
+import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
 
 export async function POST(req: Request) {
   try {
@@ -40,33 +32,11 @@ export async function POST(req: Request) {
     });
 
     const resetUrl = `${config.baseUrl}/reset-password?token=${rawToken}`;
-    const safeUrl = escapeHtml(resetUrl);
-
-    const textBody = joinTextParagraphs([
-      `Hello,`,
-      `We received a request to reset the password for your account.`,
-      `Reset your password using this link (valid for 1 hour):\n${resetUrl}`,
-      `If you did not request a reset, you can ignore this email; your password will stay the same.`,
-      emailSignatureText("Reiner"),
-    ]);
-
-    const htmlBody = wrapEmailMainHtml(
-      [
-        emailParagraphHtml("Hello,"),
-        emailParagraphHtml("We received a request to reset the password for your account."),
-        emailParagraphHtml(`<a href="${safeUrl}">Reset your password</a> (this link expires in 1 hour.)`),
-        emailParagraphHtml(
-          `If the button does not work, copy and paste this address into your browser:<br/><span style="word-break:break-all;font-size:14px;">${safeUrl}</span>`
-        ),
-        emailParagraphHtml(
-          "If you did not request a reset, you can ignore this email; your password will stay the same."
-        ),
-        emailSignatureHtml("Reiner"),
-      ].join(""),
-      clientEmailBranding()
-    );
-
-    await sendMail(user.email, "Reset your password", textBody, htmlBody);
+    const tpl = await renderClientEmailTemplate("PASSWORD_RESET", {
+      resetUrl,
+      supportEmail: config.supportEmail,
+    });
+    await sendMail(user.email, tpl.subject, tpl.textBody, tpl.htmlBody);
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -54,6 +54,16 @@ const nextConfig = {
         destination: "/admin_dashboard/:path*",
         permanent: false,
       },
+      {
+        source: "/admin_dashboard/billing",
+        destination: "/processor1_dashboard/quote",
+        permanent: false,
+      },
+      {
+        source: "/admin_dashboard/billing/:path*",
+        destination: "/processor1_dashboard/quote",
+        permanent: false,
+      },
     ];
   },
 };

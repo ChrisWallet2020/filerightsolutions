@@ -4,7 +4,8 @@ import fs from "fs/promises";
 import { prisma } from "@/lib/db";
 import { getAuthedUserId } from "@/lib/auth";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
-import { emailSignatureText, joinTextParagraphs } from "@/lib/email/formatting";
+import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
+import { unmarkQuoteRecipientEmailSent } from "@/lib/admin/quoteSentRecipients";
 
 /**
  * Minimal PDF generator (no external libs).
@@ -104,17 +105,6 @@ function nextDayAtNineAM(start: Date): Date {
   return new Date(Date.UTC(y, m - 1, day + 1, 1, 0, 0, 0));
 }
 
-function buildNoReductionEmailBody(customerName: string): string {
-  return joinTextParagraphs([
-    `Dear ${customerName},`,
-    "After reviewing your details, we found no meaningful tax reduction opportunity based on applicable rules and allowable adjustments.",
-    "At this level, the available deductions, credits, and optimization strategies typically result in minimal or no material difference in the final tax payable. As part of our commitment to transparency and value, we only recommend proceeding when there is a clear and beneficial outcome for you.",
-    "For this reason, we are unable to proceed with further processing at this time.",
-    "Thank you for your understanding and for considering our services.",
-    emailSignatureText("Reiner"),
-  ]);
-}
-
 function isGradOsdSelected(payload: Record<string, string>): boolean {
   return String(payload["taxRateMethod"] || "").trim().toUpperCase() === "GRAD_OSD";
 }
@@ -158,6 +148,9 @@ export async function POST(req: Request) {
     const customerEmail = user?.email?.trim();
     const customerName = user?.fullName?.trim() || "Client";
     if (customerEmail) {
+      const noReductionTpl = await renderClientEmailTemplate("EVALUATION_NO_REDUCTION_UPDATE", {
+        customerName,
+      });
       const pendingDraft = await prisma.evaluation.findFirst({
         where: { userId, status: "DRAFT" },
         orderBy: { createdAt: "desc" },
@@ -178,8 +171,8 @@ export async function POST(req: Request) {
           data: {
             type: "EVALUATION_NO_REDUCTION_UPDATE",
             toEmail: customerEmail,
-            subject: "Update on Your Tax Evaluation",
-            body: buildNoReductionEmailBody(customerName),
+            subject: noReductionTpl.subject,
+            body: noReductionTpl.textBody,
             sendAt: nextDayAtNineAM(new Date()),
             ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
             userId,
@@ -206,6 +199,9 @@ export async function POST(req: Request) {
       const customerEmail = user?.email?.trim();
       const customerName = user?.fullName?.trim() || "Client";
       if (customerEmail) {
+        const noReductionTpl = await renderClientEmailTemplate("EVALUATION_NO_REDUCTION_UPDATE", {
+          customerName,
+        });
         const pendingDraft = await prisma.evaluation.findFirst({
           where: { userId, status: "DRAFT" },
           orderBy: { createdAt: "desc" },
@@ -226,8 +222,8 @@ export async function POST(req: Request) {
             data: {
               type: "EVALUATION_NO_REDUCTION_UPDATE",
               toEmail: customerEmail,
-              subject: "Update on Your Tax Evaluation",
-              body: buildNoReductionEmailBody(customerName),
+              subject: noReductionTpl.subject,
+              body: noReductionTpl.textBody,
               sendAt: nextDayAtNineAM(new Date()),
               ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
               userId,
@@ -343,6 +339,15 @@ export async function POST(req: Request) {
       pdfSizeBytes: pdfBuf.byteLength,
     },
   });
+
+  const quoteListUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  const quoteListEmail = quoteListUser?.email?.trim();
+  if (quoteListEmail) {
+    await unmarkQuoteRecipientEmailSent(quoteListEmail).catch(() => {});
+  }
 
   return NextResponse.redirect(new URL("/evaluation-submitted", req.url));
 }

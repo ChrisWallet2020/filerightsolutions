@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isAdminAuthed } from "@/lib/auth";
+import { isPaymentQuoteOperatorAuthed, paymentQuoteReturnUrl } from "@/lib/admin/paymentQuoteAccess";
 import { createPaymentQuoteAdmin } from "@/lib/admin/paymentQuoteCreate";
 
 const Schema = z.object({
@@ -11,7 +11,7 @@ const Schema = z.object({
 });
 
 export async function POST(req: Request) {
-  if (!isAdminAuthed()) {
+  if (!(await isPaymentQuoteOperatorAuthed())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     expiresAt: null,
   });
 
-  const redir = new URL("/admin_dashboard/billing", req.url);
+  const redir = new URL(paymentQuoteReturnUrl(req), req.url);
   redir.searchParams.set("newToken", token);
   return NextResponse.redirect(redir, 303);
 }

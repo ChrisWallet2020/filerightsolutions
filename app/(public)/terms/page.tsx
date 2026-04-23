@@ -13,7 +13,7 @@ export default function TermsPage() {
   const site = config.siteName;
 
   return (
-    <main className="min-h-screen bg-white text-gray-800 px-6 py-12">
+    <main className="publicPage policyPage">
       <div className="max-w-2xl mx-auto space-y-6 text-sm leading-relaxed">
         <h1 className="text-2xl font-semibold text-gray-900">Terms and Conditions</h1>
 

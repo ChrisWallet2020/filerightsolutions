@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/db";
 import { EMAIL_TYPE } from "@/lib/constants";
-import {
-  buildPaymentReceivedTaxFilingInProgressEmail,
-  paymentReceivedTaxFilingInProgressSubject,
-} from "@/lib/email/paymentReceivedInProgressEmail";
+import { buildPaymentReceivedTaxFilingInProgressEmail } from "@/lib/email/paymentReceivedInProgressEmail";
 import { sendMail } from "@/lib/email/mailer";
 
 /**
@@ -19,25 +16,22 @@ export async function sendPaymentReceivedTaxFilingInProgressForOrder(order: {
   const to = order.customerEmail.trim();
   if (!to) return;
 
-  const subject = paymentReceivedTaxFilingInProgressSubject();
+  const preview = await buildPaymentReceivedTaxFilingInProgressEmail(order.customerName, order.orderId);
 
   const log = await prisma.emailLog.upsert({
     where: { orderId_type: { orderId: order.id, type: EMAIL_TYPE.PAYMENT_RECEIVED } },
-    update: { toEmail: to, subject },
+    update: { toEmail: to, subject: preview.subject },
     create: {
       orderId: order.id,
       type: EMAIL_TYPE.PAYMENT_RECEIVED,
       toEmail: to,
-      subject,
+      subject: preview.subject,
     },
   });
 
   if (log.sentAt) return;
 
-  const { subject: subj, textBody, htmlBody } = buildPaymentReceivedTaxFilingInProgressEmail(
-    order.customerName,
-    order.orderId
-  );
+  const { subject: subj, textBody, htmlBody } = preview;
 
   try {
     const r = await sendMail(to, subj, textBody, htmlBody);

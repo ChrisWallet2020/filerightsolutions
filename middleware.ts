@@ -95,7 +95,10 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.startsWith("/processor1_dashboard")) {
     if (pathname.startsWith("/processor1_dashboard/login")) return NextResponse.next();
-    if (!(await hasValidProcessor1Cookie(req))) {
+    const quotePath =
+      pathname === "/processor1_dashboard/quote" || pathname.startsWith("/processor1_dashboard/quote/");
+    const adminOnQuote = quotePath && (await hasValidAdminCookie(req));
+    if (!adminOnQuote && !(await hasValidProcessor1Cookie(req))) {
       return NextResponse.redirect(new URL("/processor1_dashboard/login", req.url));
     }
     return NextResponse.next();
@@ -103,7 +106,10 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.startsWith("/processor2_dashboard")) {
     if (pathname.startsWith("/processor2_dashboard/login")) return NextResponse.next();
-    if (!(await hasValidProcessor2Cookie(req))) {
+    const quotePath =
+      pathname === "/processor2_dashboard/quote" || pathname.startsWith("/processor2_dashboard/quote/");
+    const adminOnQuote = quotePath && (await hasValidAdminCookie(req));
+    if (!adminOnQuote && !(await hasValidProcessor2Cookie(req))) {
       return NextResponse.redirect(new URL("/processor2_dashboard/login", req.url));
     }
     return NextResponse.next();

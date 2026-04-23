@@ -8,6 +8,9 @@ export default function Processor2Login() {
   return (
     <section className="section">
       <h1>Processor2 Login</h1>
+      <p className="muted" style={{ marginTop: 8 }}>
+        Sign in with your assigned processor employee account.
+      </p>
       <AdminLoginForm
         action="/api/processor2/login"
         identifierLabel="Username"

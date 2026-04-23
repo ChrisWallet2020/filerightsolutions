@@ -7,30 +7,30 @@ export type AdminClientEmailOption = {
   fullName: string;
   /** ISO 8601 — optional; filing confirmation UI uses for “last sent”. */
   lastFilingNotifySentAt?: string | null;
+  /** ISO 8601 — optional; quote UI uses for “Last sent”. */
+  lastQuoteSentAt?: string | null;
 };
 
-/** Primary label for pickers; disambiguates duplicate full names with email in parentheses. */
-export function optionDisplayLabel(c: AdminClientEmailOption, options: AdminClientEmailOption[]): string {
-  const name = c.fullName.trim() || c.email;
-  const n = c.fullName.trim().toLowerCase();
-  const dup = n && options.filter((o) => o.fullName.trim().toLowerCase() === n).length > 1;
-  return dup ? `${name} (${c.email})` : name;
+/** Primary label for pickers (input value after select, blur resolution, filter). Includes email when a name exists. */
+export function optionDisplayLabel(c: AdminClientEmailOption, _options: AdminClientEmailOption[]): string {
+  const name = c.fullName.trim();
+  if (!name) return c.email;
+  return `${name} (${c.email})`;
 }
 
-function isDuplicateFullName(c: AdminClientEmailOption, options: AdminClientEmailOption[]): boolean {
-  const n = c.fullName.trim().toLowerCase();
-  return Boolean(n && options.filter((o) => o.fullName.trim().toLowerCase() === n).length > 1);
-}
-
-function OptionNameRow({ c, options }: { c: AdminClientEmailOption; options: AdminClientEmailOption[] }) {
-  const name = c.fullName.trim() || c.email;
-  const dup = isDuplicateFullName(c, options);
+function OptionNameRow({ c }: { c: AdminClientEmailOption }) {
+  const name = c.fullName.trim();
+  if (!name) {
+    return (
+      <div style={{ fontSize: 14, lineHeight: 1.35 }}>
+        <span style={{ fontWeight: 400, color: "#334155" }}>{c.email}</span>
+      </div>
+    );
+  }
   return (
     <div style={{ fontSize: 14, lineHeight: 1.35 }}>
       <span style={{ fontWeight: 700 }}>{name}</span>
-      {dup ? (
-        <span style={{ fontWeight: 400, color: "#64748b" }}> ({c.email})</span>
-      ) : null}
+      <span style={{ fontWeight: 400, color: "#64748b", marginLeft: 6 }}>({c.email})</span>
     </div>
   );
 }
@@ -60,6 +60,9 @@ type Props = {
   inputName?: string;
   required?: boolean;
   placeholder?: string;
+  maxWidth?: number | string;
+  /** Fires when the hidden email (name variant) is committed or cleared. */
+  onCommittedEmailChange?: (email: string) => void;
   value?: string;
   onChange?: (email: string) => void;
   /**
@@ -76,6 +79,8 @@ export function AdminClientEmailCombobox({
   inputName,
   required,
   placeholder,
+  maxWidth = 480,
+  onCommittedEmailChange,
   value: controlledValue,
   onChange: controlledOnChange,
   variant: variantProp = "email",
@@ -94,6 +99,11 @@ export function AdminClientEmailCombobox({
   const [committedEmail, setCommittedEmail] = useState("");
 
   const email = isControlled ? controlledValue! : inner;
+
+  useEffect(() => {
+    if (nameKind !== "form") return;
+    onCommittedEmailChange?.(committedEmail);
+  }, [nameKind, committedEmail, onCommittedEmailChange]);
 
   // When `email` is cleared while typing, do not reset `nameQuery` here (parent clears `email` on each keystroke).
   useEffect(() => {
@@ -157,7 +167,7 @@ export function AdminClientEmailCombobox({
 
   if (nameKind === "form" || nameKind === "controlled") {
     return (
-      <div style={{ position: "relative", maxWidth: 480 }}>
+      <div style={{ position: "relative", maxWidth }}>
         <input
           type="text"
           value={nameQuery}
@@ -231,7 +241,7 @@ export function AdminClientEmailCombobox({
                     (e.currentTarget as HTMLButtonElement).style.background = "#fff";
                   }}
                 >
-                  <OptionNameRow c={c} options={options} />
+                  <OptionNameRow c={c} />
                 </button>
               </li>
             ))}
@@ -242,7 +252,7 @@ export function AdminClientEmailCombobox({
   }
 
   return (
-    <div style={{ position: "relative", maxWidth: 480 }}>
+    <div style={{ position: "relative", maxWidth }}>
       <input
         type="email"
         name={inputName}
@@ -314,8 +324,7 @@ export function AdminClientEmailCombobox({
                   (e.currentTarget as HTMLButtonElement).style.background = "#fff";
                 }}
               >
-                <div style={{ fontWeight: 700 }}>{c.email}</div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{c.fullName}</div>
+                <OptionNameRow c={c} />
               </button>
             </li>
           ))}

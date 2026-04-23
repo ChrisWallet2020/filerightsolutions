@@ -132,7 +132,8 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
 
           <p className="muted adminBodyText">
             Only paid clients appear here. Sending this will notify them via their sign-in email that their tax filing has
-            been completed.
+            been completed. Once the client has been successfully notified, their email address will no longer be searchable
+            here. If sending this email fails, the client&apos;s address remains searchable so you can try again.
           </p>
 
           <div className="adminActions">

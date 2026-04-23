@@ -90,6 +90,7 @@ type FormState = {
   aggregate30: string;
 
   overpaymentOption: "REFUND" | "TCC" | "CARRY_OVER" | "";
+  printedNameSignature: string;
 
   /** Part IV — dual columns per BIR 1701A (items 36–65). */
   part4: Record<string, string>;
@@ -207,6 +208,7 @@ const emptyForm: FormState = {
   aggregate30: Z,
 
   overpaymentOption: "",
+  printedNameSignature: "",
 
   part4: defaultPart4(),
 };
@@ -924,6 +926,68 @@ export default function Bir1701AFormClient({
                 label="To be carried over as a tax credit for next year/quarter"
                 onClick={() => set("overpaymentOption", "CARRY_OVER")}
               />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, border: "1px solid #94a3b8", background: "#f8fafc" }}>
+            <div
+              style={{
+                fontSize: 12,
+                color: "#334155",
+                lineHeight: 1.35,
+                padding: "8px 10px",
+                borderBottom: "1px solid #94a3b8",
+              }}
+            >
+              I declare under the penalties of perjury that this return, and all its attachments, have been made in
+              good faith, verified by me, and to the best of my knowledge and belief, are true and correct pursuant to
+              the provisions of the National Internal Revenue Code, as amended, and the regulations issued under
+              authority thereof.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 255px", minHeight: 82 }}>
+              <div style={{ padding: "10px 12px", borderRight: "1px solid #94a3b8" }}>
+                <input
+                  type="text"
+                  value={data.printedNameSignature}
+                  onChange={(e) => set("printedNameSignature", e.target.value)}
+                  placeholder="Name of Taxpayer or Representative"
+                  style={{
+                    width: "100%",
+                    border: "none",
+                    borderBottom: "1px solid #0f172a",
+                    background: "transparent",
+                    padding: "6px 2px 4px",
+                    fontSize: 13,
+                    color: "#0f172a",
+                    boxSizing: "border-box",
+                    outline: "none",
+                    marginTop: 18,
+                    textAlign: "center",
+                  }}
+                />
+                <div style={{ textAlign: "center", fontSize: 12, color: "#0f172a", marginTop: 4 }}>
+                  Printed Name and Signature of Taxpayer/Authorized Representative &amp; TIN
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#0f172a" }}>
+                  <span style={{ fontSize: 13, lineHeight: 1.1 }}>31</span>
+                  <span>Number of Attachments</span>
+                  <input
+                    value="0"
+                    readOnly
+                    style={{
+                      width: 38,
+                      textAlign: "right",
+                      border: "1px solid #94a3b8",
+                      borderRadius: 2,
+                      padding: "2px 6px",
+                      fontSize: 12,
+                      background: "#fff",
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

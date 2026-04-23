@@ -9,10 +9,13 @@ const NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin_dashboard", label: "Dashboard" },
   { href: "/admin_dashboard/orders", label: "Orders" },
   { href: "/admin_dashboard/evaluation-limits", label: "Evaluation limits" },
+  { href: "/admin_dashboard/processor-accounts", label: "Processor accounts" },
+  { href: "/admin_dashboard/income-tracker", label: "Income tracker" },
   { href: "/admin_dashboard/high-volume", label: "Submission controls" },
-  { href: "/admin_dashboard/billing", label: "Billing" },
   { href: "/admin_dashboard/filing-queue", label: "Filing queue" },
   { href: "/admin_dashboard/client-emailer", label: "Client emailer" },
+  { href: "/admin_dashboard/email-templates", label: "Email Templates" },
+  { href: "/admin_dashboard/quote", label: "Quote" },
   { href: "/admin_dashboard/agents", label: "Agents" },
 ];
 

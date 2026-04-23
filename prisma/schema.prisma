@@ -245,6 +245,26 @@ model FilingCompleteNotifySend {
   @@index([userId, sentAt])
 }
 
+/// Temporary quote email images (4 slots) keyed by client sign-in email; cleared after a successful send.
+model PaymentQuoteImageStaging {
+  id          String   @id @default(cuid())
+  clientEmail String
+  slot        Int
+  data        Bytes
+  filename    String
+  mimeType    String
+  /// processor1 | processor2 | admin
+  uploadedBy  String
+  /// When a processor uploads: `processor1:<userId>` or `processor2:<userId>` (or bare role if legacy); null for admin.
+  uploadedByActorKey String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientEmail, slot])
+  @@index([clientEmail])
+}
+
 model PaymentQuote {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -370,4 +390,20 @@ model SiteSetting {
   value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Append-only payroll-style log: quote image uploads (P1/P2) and filing-complete emails (P2 actor only).
+model ProcessorCompensationLedger {
+  id            String   @id @default(cuid())
+  processorRole String
+  kind          String
+  amountPhp     Int
+  clientEmail   String?
+  slot          Int?
+  targetUserId  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([processorRole, createdAt])
+  @@index([processorRole, kind])
 }

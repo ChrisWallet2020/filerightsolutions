@@ -16,7 +16,12 @@ export default async function AdminEvaluationLimitsPage() {
       </p>
 
       <section className="adminCard" style={{ marginTop: 16 }}>
-        <form action="/api/admin/site-settings/evaluation-limits" method="post" style={{ display: "grid", gap: 12 }}>
+        <form
+          action="/api/admin/site-settings/evaluation-limits"
+          method="post"
+          className="form"
+          style={{ display: "grid", gap: 12 }}
+        >
           <label className="adminLabel">
             Minimum Sales / Revenues / Receipts / Fees
             <input

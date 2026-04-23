@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   }
 
   const firstName = firstNameFromFullName(user.fullName);
-  const { subject, textBody, htmlBody } = buildFilingCompleteNotifyEmail(firstName);
+  const { subject, textBody, htmlBody } = await buildFilingCompleteNotifyEmail(firstName);
 
   return NextResponse.json({
     ok: true,

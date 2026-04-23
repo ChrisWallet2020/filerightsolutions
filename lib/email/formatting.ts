@@ -10,6 +10,21 @@ export function escapeHtml(s: string) {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Very small, safe inline formatter for template body text.
+ * Supports:
+ * - **bold**
+ * - _italic_
+ *
+ * HTML is escaped first, then markers are transformed.
+ */
+function formatSimpleInlineSyntax(s: string): string {
+  const escaped = escapeHtml(s);
+  // Bold first so nested italic inside bold still works reasonably.
+  const withBold = escaped.replace(/\*\*([^*\n][^*\n]*?)\*\*/g, "<strong>$1</strong>");
+  return withBold.replace(/(^|[\s(])_([^_\n][^_\n]*?)_(?=[$\s).,!?;:])/g, "$1<em>$2</em>");
+}
+
 export const BILLING_EMAIL_FOOTER_TEXT = [
   "—",
   "",
@@ -125,11 +140,36 @@ export function joinTextParagraphs(lines: string[]): string {
 
 /** Convert plain text (paragraphs separated by blank lines) to simple HTML paragraphs. */
 export function textToEmailHtmlParagraphs(text: string): string {
-  const blocks = text
-    .split(/\n{2,}/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return blocks
-    .map((b) => `<p style="${P_BODY}">${escapeHtml(b).replace(/\n/g, "<br/>")}</p>`)
-    .join("");
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let para: string[] = [];
+  let blankRun = 0;
+
+  function flushParagraph() {
+    if (!para.length) return;
+    out.push(`<p style="${P_BODY}">${formatSimpleInlineSyntax(para.join("\n")).replace(/\n/g, "<br/>")}</p>`);
+    para = [];
+  }
+
+  for (const rawLine of lines) {
+    const isBlank = rawLine.trim().length === 0;
+    if (isBlank) {
+      flushParagraph();
+      blankRun += 1;
+      continue;
+    }
+
+    // One blank line already separates paragraphs via <p> margins.
+    // Preserve any additional blank lines the editor intentionally adds.
+    if (blankRun > 1) {
+      for (let i = 0; i < blankRun - 1; i += 1) {
+        out.push(`<p style="${P_BODY}">&nbsp;</p>`);
+      }
+    }
+    blankRun = 0;
+    para.push(rawLine.trimEnd());
+  }
+
+  flushParagraph();
+  return out.join("");
 }
