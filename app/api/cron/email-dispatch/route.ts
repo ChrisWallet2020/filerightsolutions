@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     try {
       if (e.type === EMAIL_TYPE.PAYMENT_RECEIVED) {
         if (order.status !== ORDER_STATUS.PAID || !order.paidAt) { skipped++; continue; }
-        const tpl = buildPaymentReceivedTaxFilingInProgressEmail(order.customerName, order.orderId);
+        const tpl = await buildPaymentReceivedTaxFilingInProgressEmail(order.customerName, order.orderId);
         const r = await sendMail(e.toEmail, tpl.subject, tpl.textBody, tpl.htmlBody);
         await prisma.emailLog.update({ where: { id: e.id }, data: { sentAt: new Date(), providerMessageId: r.messageId } });
         sent++;
