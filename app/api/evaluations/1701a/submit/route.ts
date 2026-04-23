@@ -435,7 +435,12 @@ Account email: ${evalRow.user?.email ?? "(unknown)"}`,
     }
 
     // Queue a client follow-up email (next business day) with a login-protected payment link.
+    // Currently disabled by policy: keep template editable in admin, but do not enqueue for delivery.
     try {
+      const evaluationPaymentFollowupEnabled = false;
+      if (!evaluationPaymentFollowupEnabled) {
+        return NextResponse.json({ ok: true });
+      }
       const customerEmail = evalRow.user?.email?.trim();
       const customerName = evalRow.user?.fullName?.trim() || "Client";
       if (customerEmail) {

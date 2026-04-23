@@ -8,9 +8,13 @@ import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      return NextResponse.json({ ok: true });
+    }
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     // Always return success (security)

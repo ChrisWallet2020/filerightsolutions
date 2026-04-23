@@ -125,6 +125,7 @@ export function BillingQuoteForm({
   /** ISO timestamp: max staging `updatedAt` for this dashboard's slots and client (from GET staging). */
   const [quoteImagesLastSavedAt, setQuoteImagesLastSavedAt] = useState<string | null>(null);
   const [sendAllBanner, setSendAllBanner] = useState<string | null>(null);
+  const [sendAllBannerTone, setSendAllBannerTone] = useState<"success" | "warn" | "error">("success");
   const [sendAllJob, setSendAllJob] = useState<SendAllJob | null>(null);
 
   const isProcessorDashboard =
@@ -463,6 +464,7 @@ export function BillingQuoteForm({
   async function handleSendAll() {
     setSendBanner(null);
     setSendAllBanner(null);
+    setSendAllBannerTone("success");
     setSendingAll(true);
     try {
       const res = await fetch("/api/admin/payment-quotes/send-all", {
@@ -475,11 +477,20 @@ export function BillingQuoteForm({
         stackAppend?: boolean;
       };
       if (!res.ok) {
+        if (data.error === "busy_with_reminders") {
+          setSendAllBanner(
+            "Reminder emails are currently running. Send-all quotes will be available once that batch finishes.",
+          );
+          setSendAllBannerTone("warn");
+          setSendingAll(false);
+          return;
+        }
         setSendAllBanner(
           data.error === "unauthorized"
             ? "Send all failed: you are not signed in as admin, Processor1, or Processor2."
             : "Send all failed. Please try again.",
         );
+        setSendAllBannerTone("error");
         setSendingAll(false);
         return;
       }
@@ -487,6 +498,7 @@ export function BillingQuoteForm({
       setSendAllJob(job);
       if (!job) {
         setSendAllBanner("Send all started. Refresh to check progress.");
+        setSendAllBannerTone("success");
         return;
       }
       if (job.status === "running") {
@@ -497,21 +509,25 @@ export function BillingQuoteForm({
         } else {
           setSendAllBanner(sendAllRunningBanner(job));
         }
+        setSendAllBannerTone("success");
         return;
       }
       if (job.status === "done") {
         setSendAllBanner(`Done. Sent: ${job.sent}, Skipped: ${job.skipped}, Failed: ${job.failed}, Total: ${job.total}.`);
+        setSendAllBannerTone("success");
         setSendingAll(false);
         return;
       }
       if (job.status === "error") {
         setSendAllBanner(job.lastError ? `Send all failed: ${job.lastError}` : "Send all failed.");
+        setSendAllBannerTone("error");
         setSendingAll(false);
         return;
       }
       setSendingAll(false);
     } catch {
       setSendAllBanner("Send all failed: check your connection and try again.");
+      setSendAllBannerTone("error");
       setSendingAll(false);
     }
   }
@@ -569,7 +585,16 @@ export function BillingQuoteForm({
           </div>
         ) : null}
         {!isProcessorDashboard && sendAllBanner ? (
-          <div className="adminNotice adminNotice--success" style={{ marginBottom: 14 }}>
+          <div
+            className={
+              sendAllBannerTone === "error"
+                ? "adminNotice adminNotice--error"
+                : sendAllBannerTone === "warn"
+                  ? "adminNotice adminNotice--warn"
+                  : "adminNotice adminNotice--success"
+            }
+            style={{ marginBottom: 14 }}
+          >
             <strong className="adminNoticeTitle">Send all quote emails</strong>
             <p className="adminNoticeBody">{sendAllBanner}</p>
           </div>

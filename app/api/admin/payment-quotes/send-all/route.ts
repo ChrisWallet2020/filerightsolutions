@@ -6,6 +6,7 @@ import {
   kickSendAllQuotesJob,
   startSendAllQuotesJob,
 } from "@/lib/admin/sendAllQuotesJob";
+import { getBulkEmailSchedulerState } from "@/lib/admin/bulkEmailScheduler";
 
 export async function GET() {
   if (!(await isPaymentQuoteOperatorAuthed())) {
@@ -21,6 +22,16 @@ export async function GET() {
 export async function POST() {
   if (!(await isPaymentQuoteOperatorAuthed())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const scheduler = await getBulkEmailSchedulerState();
+  if (scheduler.activeJobType === "reminders_send_all") {
+    return NextResponse.json(
+      {
+        error: "busy_with_reminders",
+        message: "Reminder email batch is currently running. Please retry after it finishes.",
+      },
+      { status: 409 }
+    );
   }
   const before = await getSendAllQuotesJobState();
   const prevQueuedBatches = before.queuedBatches?.length ?? 0;

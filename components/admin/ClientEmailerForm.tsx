@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const ERR_MAP: Record<string, string> = {
@@ -11,6 +11,21 @@ const ERR_MAP: Record<string, string> = {
 };
 
 type PendingState = "preview" | "send" | null;
+type ReminderJobState = {
+  id: string;
+  status: "idle" | "queued" | "running" | "done" | "error";
+  total: number;
+  processed: number;
+  sent: number;
+  failed: number;
+  skippedPaid: number;
+  lastError: string;
+};
+
+type SchedulerState = {
+  activeJobType: "quotes_send_all" | "reminders_send_all" | null;
+  queue: ("quotes_send_all" | "reminders_send_all")[];
+};
 
 export function ClientEmailerForm() {
   const router = useRouter();
@@ -20,9 +35,13 @@ export function ClientEmailerForm() {
   const [previewSubject, setPreviewSubject] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingState>(null);
+  const [sendingReminders, setSendingReminders] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [reminderErr, setReminderErr] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [devLogOnly, setDevLogOnly] = useState(false);
+  const [reminderJob, setReminderJob] = useState<ReminderJobState | null>(null);
+  const [scheduler, setScheduler] = useState<SchedulerState | null>(null);
 
   const canSubmit = Boolean(email.trim() && subject.trim() && body.trim());
 
@@ -69,6 +88,87 @@ export function ClientEmailerForm() {
       setPending(null);
     }
   }
+
+  async function sendAllReminderEmails() {
+    setReminderErr(null);
+    setSendingReminders(true);
+    try {
+      const res = await fetch("/api/admin/client-emailer/send-reminder-all", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        queued?: boolean;
+        started?: boolean;
+        job?: ReminderJobState;
+        scheduler?: SchedulerState;
+      };
+      if (!res.ok || !json.job) {
+        setReminderErr(ERR_MAP[json.error || ""] || `Request failed (${res.status}).`);
+        return;
+      }
+      setReminderJob(json.job);
+      setScheduler(json.scheduler ?? null);
+      router.refresh();
+    } finally {
+      setSendingReminders(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/client-emailer/send-reminder-all/status", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          job?: ReminderJobState;
+          scheduler?: SchedulerState;
+        };
+        if (cancelled || !res.ok || !json.job) return;
+        setReminderJob(json.job);
+        setScheduler(json.scheduler ?? null);
+      } catch {
+        // no-op
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const shouldPoll = reminderJob?.status === "queued" || reminderJob?.status === "running";
+    if (!shouldPoll) return;
+    let cancelled = false;
+    const id = window.setInterval(async () => {
+      try {
+        const res = await fetch("/api/admin/client-emailer/send-reminder-all/status", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          job?: ReminderJobState;
+          scheduler?: SchedulerState;
+        };
+        if (cancelled || !res.ok || !json.job) return;
+        setReminderJob(json.job);
+        setScheduler(json.scheduler ?? null);
+      } catch {
+        // keep last known state
+      }
+    }, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [reminderJob?.status]);
 
   return (
     <div className="adminStack" style={{ maxWidth: 760 }}>
@@ -177,6 +277,62 @@ export function ClientEmailerForm() {
               srcDoc={previewHtml}
               className="adminPreviewFrame"
             />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="adminCard">
+        <h2>Reminder email</h2>
+        <p className="muted adminBodyText" style={{ marginBottom: 12 }}>
+          Sends the <strong>BIR 1701A deadline reminder</strong> template to registered client accounts that have not yet
+          paid for services.
+        </p>
+
+        <div className="adminActions">
+          <button
+            type="button"
+            className="btn"
+            disabled={sendingReminders}
+            onClick={() => void sendAllReminderEmails()}
+          >
+            {sendingReminders ? "Sending reminders…" : "Send all reminder emails"}
+          </button>
+        </div>
+
+        {reminderErr ? (
+          <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Reminder email</strong>
+            <p className="adminNoticeBody">{reminderErr}</p>
+          </div>
+        ) : null}
+
+        {reminderJob?.status === "done" ? (
+          <div className="adminNotice adminNotice--success" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Reminder batch finished</strong>
+            <p className="adminNoticeBody">
+              Processed: <b>{reminderJob.processed}</b> / <b>{reminderJob.total}</b>, sent: <b>{reminderJob.sent}</b>,
+              failed: <b>{reminderJob.failed}</b>, skipped paid clients: <b>{reminderJob.skippedPaid}</b>.
+            </p>
+          </div>
+        ) : null}
+        {reminderJob && (reminderJob.status === "queued" || reminderJob.status === "running") ? (
+          <div className="adminNotice adminNotice--warn" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">
+              {reminderJob.status === "queued" ? "Reminder batch queued" : "Reminder batch running"}
+            </strong>
+            <p className="adminNoticeBody">
+              {reminderJob.status === "queued"
+                ? "This batch will start after higher-priority email jobs finish."
+                : "Sending is in progress."}{" "}
+              Progress: <b>{reminderJob.processed}</b> / <b>{reminderJob.total}</b>.
+              {scheduler?.activeJobType === "quotes_send_all" ? " Waiting for quote send-all to finish." : ""}
+            </p>
+          </div>
+        ) : null}
+        {reminderJob?.status === "error" ? (
+          <div className="adminNotice adminNotice--error" style={{ marginTop: 14 }}>
+            <strong className="adminNoticeTitle">Reminder batch failed</strong>
+            <p className="adminNoticeBody">{reminderJob.lastError || "Unexpected error while running reminder batch."}</p>
           </div>
         ) : null}
       </div>

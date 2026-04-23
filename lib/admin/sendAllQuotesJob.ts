@@ -1,6 +1,11 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { sendBillingQuoteToUserEmail } from "@/lib/admin/sendBillingQuote";
+import {
+  markBulkEmailJobFinished,
+  setBulkEmailSchedulerActive,
+  tryStartNextBulkEmailJob,
+} from "@/lib/admin/bulkEmailScheduler";
 
 const SITE_KEY = "quote_send_all_job_v1";
 const BATCH_SIZE = 2;
@@ -186,6 +191,7 @@ export async function startSendAllQuotesJob(emails: string[]): Promise<SendAllQu
     };
     next.total = recomputeTotal(next);
     await upsertJobState(tx, next);
+    await setBulkEmailSchedulerActive("quotes_send_all");
     return next;
   });
 }
@@ -240,6 +246,8 @@ export async function runSendAllQuotesJob(jobId: string): Promise<void> {
         };
         done.total = recomputeTotal(done);
         await saveState(done);
+        await markBulkEmailJobFinished("quotes_send_all");
+        await tryStartNextBulkEmailJob();
         return;
       }
       const continued: SendAllQuotesJobState = {
@@ -308,7 +316,11 @@ export async function runSendAllQuotesJob(jobId: string): Promise<void> {
     updated.total = recomputeTotal(updated);
     await saveState(updated);
 
-    if (pending.length < 1) return;
+    if (pending.length < 1) {
+      await markBulkEmailJobFinished("quotes_send_all");
+      await tryStartNextBulkEmailJob();
+      return;
+    }
   }
 }
 
@@ -325,6 +337,8 @@ export async function failSendAllQuotesJob(jobId: string, error: unknown): Promi
   };
   next.total = recomputeTotal(next);
   await saveState(next);
+  await markBulkEmailJobFinished("quotes_send_all");
+  await tryStartNextBulkEmailJob();
 }
 
 export function kickSendAllQuotesJob(jobId: string): void {

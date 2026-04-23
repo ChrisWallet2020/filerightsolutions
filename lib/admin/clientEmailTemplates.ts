@@ -10,7 +10,8 @@ export type TemplateKind =
   | "FILING_COMPLETE_NOTIFY"
   | "PAYMENT_RECEIVED_IN_PROGRESS"
   | "EVALUATION_NO_REDUCTION_UPDATE"
-  | "EVALUATION_PAYMENT_FOLLOWUP";
+  | "EVALUATION_PAYMENT_FOLLOWUP"
+  | "BIR_1701A_DEADLINE_REMINDER";
 
 type RenderedTemplate = {
   subject: string;
@@ -107,6 +108,24 @@ const TEMPLATE_DEFS: Record<TemplateKind, ClientEmailTemplateDef> = {
       "Payment link: {{paymentUrl}}",
     ].join("\n\n"),
   },
+  BIR_1701A_DEADLINE_REMINDER: {
+    kind: "BIR_1701A_DEADLINE_REMINDER",
+    title: "BIR 1701A deadline reminder",
+    subject: "Friendly Reminder: BIR Form 1701A Filing Deadline",
+    textBody: [
+      "Dear {{clientName}},",
+      "The tax filing deadline is fast approaching.",
+      "As a friendly reminder, late submission of your BIR Form 1701A may result in penalties imposed by the Bureau of Internal Revenue. These typically include a compromise penalty (₱1,000–₱5,000), a 25% surcharge, and 12% annual interest if there is a balance due.",
+      "To give you a clearer picture, here is a simple example for a ₱10,000 tax due filed late:",
+      "25% surcharge: ₱2,500\nCompromise penalty: ₱1,000–₱5,000\nInterest (12% annually): ₱1,200 per year (pro-rated depending on delay)",
+      "Total additional cost is ₱4,700 to ₱8,700+ on top of your original tax due.",
+      "We normally receive a high volume of client requests as the filing period nears. As a result, availability becomes limited and we may not be able to accommodate all submissions in time.",
+      "Please note that we do not process late filings, as penalty computations often require detailed manual assessment and direct handling by a tax professional.",
+      "To avoid unnecessary penalties and ensure your filing is completed properly, we strongly encourage you to proceed while slots are still available.",
+      "We remain ready to assist you-while capacity permits.",
+      "Best regards, Reiner",
+    ].join("\n\n"),
+  },
 };
 
 function wrap(textBody: string) {
@@ -160,6 +179,10 @@ function sampleDataForKind(kind: TemplateKind): Record<string, unknown> {
       return {
         customerName: "Christopher",
         paymentUrl: `${String(config.baseUrl).replace(/\/$/, "")}/account/payment`,
+      };
+    case "BIR_1701A_DEADLINE_REMINDER":
+      return {
+        clientName: "Christopher",
       };
   }
 }

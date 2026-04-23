@@ -19,6 +19,7 @@ const VARIABLE_HINTS: Record<TemplateKind, string> = {
   PAYMENT_RECEIVED_IN_PROGRESS: "{{clientName}}, {{publicOrderId}}",
   EVALUATION_NO_REDUCTION_UPDATE: "{{customerName}}",
   EVALUATION_PAYMENT_FOLLOWUP: "{{customerName}}, {{paymentUrl}}",
+  BIR_1701A_DEADLINE_REMINDER: "{{clientName}}",
 };
 
 function TemplateKindPicker({
