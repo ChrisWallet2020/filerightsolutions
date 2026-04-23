@@ -45,7 +45,7 @@ export async function POST() {
   const username = session?.userId
     ? ((await getProcessorUsernameById("processor2", session.userId)) ?? "processor2")
     : "processor2";
-  const payout = await getProcessor2PayoutDetails();
+  const payout = await getProcessor2PayoutDetails(actorKey);
   const request = await createProcessorPayoutRequest({
     role: "processor2",
     requesterActorKey: actorKey,

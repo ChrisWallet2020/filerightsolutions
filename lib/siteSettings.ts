@@ -175,6 +175,14 @@ function normalizePayoutMethod(raw: string | null | undefined): ProcessorPayoutM
   return raw === "online_banking" ? "online_banking" : "e_wallet";
 }
 
+function scopedPayoutKey(baseKey: string, actorKey?: string | null): string {
+  const normalizedActorKey = (actorKey || "").trim();
+  if (!normalizedActorKey || normalizedActorKey === "processor1" || normalizedActorKey === "processor2") {
+    return baseKey;
+  }
+  return `${baseKey}__${encodeURIComponent(normalizedActorKey)}`;
+}
+
 async function getProcessorPayoutDetails(keys: {
   method: string;
   provider: string;
@@ -233,43 +241,49 @@ async function setProcessorPayoutDetails(
   ]);
 }
 
-export async function getProcessor1PayoutDetails(): Promise<ProcessorPayoutDetails> {
+export async function getProcessor1PayoutDetails(actorKey?: string | null): Promise<ProcessorPayoutDetails> {
   return getProcessorPayoutDetails({
-    method: PROCESSOR1_PAYOUT_METHOD_KEY,
-    provider: PROCESSOR1_PAYOUT_PROVIDER_KEY,
-    accountName: PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY,
-    accountNumber: PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY,
+    method: scopedPayoutKey(PROCESSOR1_PAYOUT_METHOD_KEY, actorKey),
+    provider: scopedPayoutKey(PROCESSOR1_PAYOUT_PROVIDER_KEY, actorKey),
+    accountName: scopedPayoutKey(PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY, actorKey),
+    accountNumber: scopedPayoutKey(PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY, actorKey),
   });
 }
 
-export async function setProcessor1PayoutDetails(details: ProcessorPayoutDetails): Promise<void> {
+export async function setProcessor1PayoutDetails(
+  details: ProcessorPayoutDetails,
+  actorKey?: string | null
+): Promise<void> {
   await setProcessorPayoutDetails(
     {
-      method: PROCESSOR1_PAYOUT_METHOD_KEY,
-      provider: PROCESSOR1_PAYOUT_PROVIDER_KEY,
-      accountName: PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY,
-      accountNumber: PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY,
+      method: scopedPayoutKey(PROCESSOR1_PAYOUT_METHOD_KEY, actorKey),
+      provider: scopedPayoutKey(PROCESSOR1_PAYOUT_PROVIDER_KEY, actorKey),
+      accountName: scopedPayoutKey(PROCESSOR1_PAYOUT_ACCOUNT_NAME_KEY, actorKey),
+      accountNumber: scopedPayoutKey(PROCESSOR1_PAYOUT_ACCOUNT_NUMBER_KEY, actorKey),
     },
     details
   );
 }
 
-export async function getProcessor2PayoutDetails(): Promise<ProcessorPayoutDetails> {
+export async function getProcessor2PayoutDetails(actorKey?: string | null): Promise<ProcessorPayoutDetails> {
   return getProcessorPayoutDetails({
-    method: PROCESSOR2_PAYOUT_METHOD_KEY,
-    provider: PROCESSOR2_PAYOUT_PROVIDER_KEY,
-    accountName: PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY,
-    accountNumber: PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY,
+    method: scopedPayoutKey(PROCESSOR2_PAYOUT_METHOD_KEY, actorKey),
+    provider: scopedPayoutKey(PROCESSOR2_PAYOUT_PROVIDER_KEY, actorKey),
+    accountName: scopedPayoutKey(PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY, actorKey),
+    accountNumber: scopedPayoutKey(PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY, actorKey),
   });
 }
 
-export async function setProcessor2PayoutDetails(details: ProcessorPayoutDetails): Promise<void> {
+export async function setProcessor2PayoutDetails(
+  details: ProcessorPayoutDetails,
+  actorKey?: string | null
+): Promise<void> {
   await setProcessorPayoutDetails(
     {
-      method: PROCESSOR2_PAYOUT_METHOD_KEY,
-      provider: PROCESSOR2_PAYOUT_PROVIDER_KEY,
-      accountName: PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY,
-      accountNumber: PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY,
+      method: scopedPayoutKey(PROCESSOR2_PAYOUT_METHOD_KEY, actorKey),
+      provider: scopedPayoutKey(PROCESSOR2_PAYOUT_PROVIDER_KEY, actorKey),
+      accountName: scopedPayoutKey(PROCESSOR2_PAYOUT_ACCOUNT_NAME_KEY, actorKey),
+      accountNumber: scopedPayoutKey(PROCESSOR2_PAYOUT_ACCOUNT_NUMBER_KEY, actorKey),
     },
     details
   );

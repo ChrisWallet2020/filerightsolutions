@@ -17,7 +17,7 @@ export default async function Processor2IncomeTrackerPage() {
   const [pricing, summary, payoutDetails, payoutRequests] = await Promise.all([
     getProcessorIncomePricing(),
     fetchProcessorLedgerSummary("processor2", actorKey),
-    getProcessor2PayoutDetails(),
+    getProcessor2PayoutDetails(actorKey),
     listProcessorPayoutRequests("processor2", actorKey),
   ]);
   const { approvedPhp, pendingPhp } = payoutBreakdown(payoutRequests);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isProcessor2Authed } from "@/lib/auth";
+import { getProcessor2SessionInfo, isProcessor2Authed } from "@/lib/auth";
 import {
   getProcessor2Credentials,
   getProcessor2PayoutDetails,
@@ -24,7 +24,8 @@ export async function GET() {
   if (!isProcessor2Authed(creds.username)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const details = await getProcessor2PayoutDetails();
+  const session = getProcessor2SessionInfo();
+  const details = await getProcessor2PayoutDetails(session?.actorKey);
   return NextResponse.json({ ok: true, ...details });
 }
 
@@ -33,6 +34,7 @@ export async function PUT(req: Request) {
   if (!isProcessor2Authed(creds.username)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const session = getProcessor2SessionInfo();
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -51,6 +53,6 @@ export async function PUT(req: Request) {
     );
   }
 
-  await setProcessor2PayoutDetails({ method, provider, accountName, accountNumber });
+  await setProcessor2PayoutDetails({ method, provider, accountName, accountNumber }, session?.actorKey);
   return NextResponse.json({ ok: true });
 }
