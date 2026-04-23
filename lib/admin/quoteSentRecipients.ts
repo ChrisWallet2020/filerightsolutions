@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 
 const SITE_KEY = "quote_sent_recipient_emails_v1";
+const LEGACY_PRE_SYSTEM_SENT_RECIPIENTS = ["rieno.v.mabanglo@gmail.com"] as const;
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -26,7 +27,20 @@ export async function getSentQuoteRecipientEmails(): Promise<Set<string>> {
     where: { key: SITE_KEY },
     select: { value: true },
   });
-  return parseList(row?.value);
+  const current = parseList(row?.value);
+  const missingLegacy = LEGACY_PRE_SYSTEM_SENT_RECIPIENTS
+    .map((email) => normalizeEmail(email))
+    .filter((email) => !current.has(email));
+  if (missingLegacy.length > 0) {
+    missingLegacy.forEach((email) => current.add(email));
+    const value = JSON.stringify(Array.from(current.values()).sort());
+    await prisma.siteSetting.upsert({
+      where: { key: SITE_KEY },
+      create: { key: SITE_KEY, value },
+      update: { value },
+    });
+  }
+  return current;
 }
 
 export async function markQuoteRecipientEmailSent(email: string): Promise<void> {
