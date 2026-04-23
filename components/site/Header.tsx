@@ -10,19 +10,6 @@ type HeaderProps = {
   signedIn?: boolean;
 };
 
-/** Public pages where signed-in users see "My Account" (not on /account dashboard). */
-const PATHS_WITH_MY_ACCOUNT = new Set([
-  "/",
-  "/services",
-  "/how-it-works",
-  "/pricing",
-  "/faqs",
-  "/about",
-  "/contact",
-  "/evaluation-submitted",
-  "/evaluation-high-volume",
-]);
-
 function normalizePathname(p: string | null): string {
   if (!p) return "";
   if (p.length > 1 && p.endsWith("/")) return p.slice(0, -1);
@@ -35,7 +22,7 @@ export function Header({ signedIn = false }: HeaderProps) {
   const [signingOut, setSigningOut] = useState(false);
   const hideRegisterOnAccount = pathname?.startsWith("/account") ?? false;
   const path = normalizePathname(pathname);
-  const showMyAccount = signedIn && PATHS_WITH_MY_ACCOUNT.has(path);
+  const showMyAccount = signedIn && !path.startsWith("/account");
 
   const signOut = useCallback(async () => {
     setSigningOut(true);

@@ -177,7 +177,7 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
           <div className="adminNotice adminNotice--success" style={{ marginTop: 14 }}>
             <strong className="adminNoticeTitle">Message sent</strong>
             <p className="adminNoticeBody">
-              Queued for <b>{email.trim()}</b>. If the recipient does not see it, suggest spam or promotions.
+              Email sent to <b>{email.trim()}</b>. If the recipient does not see it, suggest spam or promotions.
             </p>
           </div>
         ) : null}

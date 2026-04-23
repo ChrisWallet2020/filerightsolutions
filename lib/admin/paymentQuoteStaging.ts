@@ -24,6 +24,10 @@ export function normalizeQuoteClientEmail(raw: string) {
   return raw.trim().toLowerCase();
 }
 
+function normalizeUploadedFilename(raw: string) {
+  return raw.trim().toLowerCase();
+}
+
 /** Latest DB write among this viewer's quote-image slots for the client (upload or save-over). */
 export async function quoteImageStagingLastSavedAt(
   clientEmail: string,
@@ -60,6 +64,22 @@ export async function saveStagingSlot(params: {
   if (params.data.length > MAX_BYTES) throw new Error("too_large");
   const mt = params.mimeType.trim().toLowerCase();
   if (!ALLOWED_MIME.has(mt)) throw new Error("bad_mime");
+
+  // Processor dashboards must keep distinct filenames across their 2-slot workspace.
+  if (params.uploadedBy === "processor1" || params.uploadedBy === "processor2") {
+    const peerSlot =
+      params.uploadedBy === "processor1" ? (params.slot === 1 ? 2 : 1) : params.slot === 3 ? 4 : 3;
+    const peer = await prisma.paymentQuoteImageStaging.findUnique({
+      where: { clientEmail_slot: { clientEmail: email, slot: peerSlot } },
+      select: { filename: true },
+    });
+    if (
+      peer?.filename &&
+      normalizeUploadedFilename(peer.filename) === normalizeUploadedFilename(params.filename)
+    ) {
+      throw new Error("duplicate_workspace_filename");
+    }
+  }
 
   const actorKey =
     params.uploadedBy === "processor1" || params.uploadedBy === "processor2"

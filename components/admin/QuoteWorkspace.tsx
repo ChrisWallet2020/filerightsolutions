@@ -131,7 +131,7 @@ export async function QuoteWorkspace({
           <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.5 }}>
             {emailFallback
               ? "The mail provider accepted a plain, link-only version after blocking the full message. The client did not receive your four quote image attachments in that email."
-              : "Delivery is usually immediate. If the client doesn&apos;t see it, suggest spam or promotions."}
+              : "Delivery is usually immediate. If the client doesn't see it, suggest spam or promotions."}
           </p>
           {emailFallback ? (
             <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.5, fontWeight: 600 }}>

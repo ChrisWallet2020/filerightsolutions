@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { ORDER_STATUS } from "@/lib/constants";
 
 export type FilingNotifyEligibilityRow = {
+  id: string;
   email: string;
   fullName: string;
   latestSubmissionAt: Date | null;
@@ -25,6 +26,7 @@ export async function getEligibleClientsAfterFilingNotifyRule(
       evaluation1701ASubmissions: { some: {} },
     },
     select: {
+      id: true,
       email: true,
       fullName: true,
       evaluation1701ASubmissions: {
@@ -75,7 +77,7 @@ export async function getEligibleClientsAfterFilingNotifyRule(
 
     // No filing-notify send yet => eligible.
     if (!lastFilingNotifySentAt) {
-      out.push({ email, fullName, latestSubmissionAt, lastFilingNotifySentAt });
+      out.push({ id: u.id, email, fullName, latestSubmissionAt, lastFilingNotifySentAt });
       continue;
     }
 
@@ -83,7 +85,7 @@ export async function getEligibleClientsAfterFilingNotifyRule(
     if (!latestSubmissionAt || latestSubmissionAt <= lastFilingNotifySentAt) continue;
     if (!latestPaidAt || latestPaidAt < latestSubmissionAt) continue;
 
-    out.push({ email, fullName, latestSubmissionAt, lastFilingNotifySentAt });
+    out.push({ id: u.id, email, fullName, latestSubmissionAt, lastFilingNotifySentAt });
   }
 
   return out;

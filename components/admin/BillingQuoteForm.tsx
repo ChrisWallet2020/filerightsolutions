@@ -350,6 +350,8 @@ export function BillingQuoteForm({
               ? "Images must be JPEG, PNG, WebP, or GIF."
               : code === "attachment_too_large_max_10mb"
                 ? "Each image must be 10MB or smaller."
+                : code === "duplicate_workspace_filename"
+                  ? "Use a different filename for the other image in your workspace."
                 : "Upload failed. Try again.",
         );
         return;

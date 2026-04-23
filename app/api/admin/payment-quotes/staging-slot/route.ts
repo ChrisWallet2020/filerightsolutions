@@ -71,6 +71,9 @@ export async function POST(req: Request) {
     if (msg === "bad_mime") {
       return NextResponse.json({ error: "attachment_must_be_image" }, { status: 400 });
     }
+    if (msg === "duplicate_workspace_filename") {
+      return NextResponse.json({ error: "duplicate_workspace_filename" }, { status: 400 });
+    }
     console.error("payment-quotes/staging-slot", e);
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
   }
