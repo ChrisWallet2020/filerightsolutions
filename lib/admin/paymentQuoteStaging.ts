@@ -111,7 +111,13 @@ export async function saveStagingSlot(params: {
     const peerSlot =
       params.uploadedBy === "processor1" ? (params.slot === 1 ? 2 : 1) : params.slot === 3 ? 4 : 3;
     const peer = await prisma.paymentQuoteImageStaging.findUnique({
-      where: { clientEmail_slot: { clientEmail: email, slot: peerSlot } },
+      where: {
+        clientEmail_submissionId_slot: {
+          clientEmail: email,
+          submissionId: activeSubmission.submissionId,
+          slot: peerSlot,
+        },
+      },
       select: { filename: true },
     });
     if (
