@@ -23,7 +23,7 @@ export default function HomePage() {
             style={{
               fontFamily:
                 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-              fontSize: "clamp(28px, 3.8vw, 36px)",
+              fontSize: "clamp(24px, 3.2vw, 34px)",
               lineHeight: 1.2,
               margin: "0 0 28px",
               letterSpacing: -0.3,
@@ -31,9 +31,8 @@ export default function HomePage() {
               color: "#0f172a",
             }}
           >
-            Amend Your BIR Form 1701A
-            <br />
-            — Correctly and Legally
+            <span style={{ display: "block", whiteSpace: "nowrap" }}>Amend Costly Annual Income Tax</span>
+            <span style={{ display: "block", whiteSpace: "nowrap" }}>Filing — Correctly and Legally</span>
           </h1>
 
           <p
@@ -47,8 +46,8 @@ export default function HomePage() {
           >
             Specialized tax filing assistance for <b>Job Order (JO)</b> and{" "}
             <b>Contract of Service (COS)</b> professionals. We review your filed{" "}
-            <b>1701A</b>, identify legally available deduction opportunities,
-            and assist in preparing amended returns when correction is beneficial.
+            <b>BIR Form 1701A, Annual Income Tax Return</b>, identify legally available deduction opportunities, and
+            assist in preparing amended returns when correction is beneficial.
           </p>
 
           <p style={{ marginTop: 10, fontSize: 14, color: "#475569" }}>
@@ -68,7 +67,7 @@ export default function HomePage() {
                 display: "inline-block",
               }}
             >
-              Check If Your 1701A Needs Correction
+              Get Free Tax Evaluation
             </Link>
 
             <Link

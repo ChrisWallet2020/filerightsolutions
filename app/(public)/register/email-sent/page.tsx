@@ -54,8 +54,8 @@ export default function RegisterEmailSentPage({
             Open the email and use the link to go to {config.siteName}, or sign in below with your email and password.
           </p>
           <p style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
-            Didn&apos;t receive it? Check spam or promotions, or wait a few minutes. You can still sign in with your
-            password — your account is already active.
+            Didn&apos;t receive it? Check <strong>spam messages</strong>, or wait a few minutes. You can still sign in
+            with your password — your account is already active.
           </p>
         </>
       )}

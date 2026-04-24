@@ -8,7 +8,8 @@ export default function EvaluationSubmittedPage() {
         <p>We&apos;ve successfully received your BIR Form 1701A evaluation.</p>
         <p>
           Our team will carefully review your submission and assess whether any corrections or tax optimizations can be
-          applied. This process typically takes 1-2 business days to complete.
+          applied. This process typically takes 1-2 business days to complete. If you do not receive an update within
+          this timeframe, please check your spam messages before contacting support.
         </p>
         <p>Thank you for trusting us to assist with your tax filing.</p>
       </section>
