@@ -18,7 +18,7 @@ const VARIABLE_HINTS: Record<TemplateKind, string> = {
   FILING_COMPLETE_NOTIFY: "{{firstName}}, {{supportEmail}}, {{epayUrl}}",
   PAYMENT_RECEIVED_IN_PROGRESS: "{{clientName}}, {{publicOrderId}}",
   EVALUATION_NO_REDUCTION_UPDATE: "{{customerName}}",
-  EVALUATION_PAYMENT_FOLLOWUP: "{{customerName}}, {{paymentUrl}}",
+  EVALUATION_PAYMENT_FOLLOWUP: "{{customerName}}, {{paymentUrl}}, {{supportEmail}}",
   BIR_1701A_DEADLINE_REMINDER: "{{clientName}}",
 };
 

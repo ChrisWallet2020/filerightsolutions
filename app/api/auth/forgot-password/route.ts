@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
-import { sendMail } from "@/lib/email/mailer";
 import { config } from "@/lib/config";
 import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 
 export async function POST(req: Request) {
   try {
@@ -40,7 +40,14 @@ export async function POST(req: Request) {
       resetUrl,
       supportEmail: config.supportEmail,
     });
-    await sendMail(user.email, tpl.subject, tpl.textBody, tpl.htmlBody);
+    await queueScheduledEmail({
+      type: "PASSWORD_RESET",
+      toEmail: user.email,
+      subject: tpl.subject,
+      body: tpl.textBody,
+      userId: user.id,
+      idempotencyKey: `password_reset:${tokenHash}`,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { getPaidUserIdSet } from "@/lib/admin/paidUserIds";
 import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
-import { sendMail } from "@/lib/email/mailer";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 import { markBulkEmailJobFinished, tryStartNextBulkEmailJob } from "@/lib/admin/bulkEmailScheduler";
 
 const SITE_KEY = "reminder_send_all_job_v1";
@@ -202,7 +202,14 @@ export async function runReminderSendAllJob(jobId: string): Promise<void> {
         const tpl = await renderClientEmailTemplate("BIR_1701A_DEADLINE_REMINDER", {
           clientName: user?.fullName || "Client",
         });
-        await sendMail(toEmail, tpl.subject, tpl.textBody, tpl.htmlBody);
+        await queueScheduledEmail({
+          type: "BIR_1701A_DEADLINE_REMINDER",
+          toEmail,
+          subject: tpl.subject,
+          body: tpl.textBody,
+          userId,
+          idempotencyKey: `reminder_send_all:${jobId}:${userId}`,
+        });
         sentInc += 1;
       } catch (err) {
         failInc += 1;

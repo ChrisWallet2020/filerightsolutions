@@ -3,9 +3,11 @@ import path from "path";
 import fs from "fs/promises";
 import { prisma } from "@/lib/db";
 import { getAuthedUserId } from "@/lib/auth";
+import { config } from "@/lib/config";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
 import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
 import { unmarkQuoteRecipientEmailSent } from "@/lib/admin/quoteSentRecipients";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 
 /**
  * Minimal PDF generator (no external libs).
@@ -118,6 +120,36 @@ function shouldSoftBlockSubmission(payload: Record<string, string>): boolean {
   return isGradOsdSelected(payload) || isBlockedAtc(payload);
 }
 
+async function queueEvaluationSubmittedEmail(params: {
+  toEmail: string | null | undefined;
+  customerName: string | null | undefined;
+  evaluationId?: string | null;
+  userId?: string | null;
+  submitKey?: string | null;
+}): Promise<void> {
+  const to = String(params.toEmail || "").trim();
+  if (!to) return;
+  try {
+    const tpl = await renderClientEmailTemplate("EVALUATION_PAYMENT_FOLLOWUP", {
+      customerName: params.customerName?.trim() || "Client",
+      paymentUrl: `${config.baseUrl}/account/payment`,
+      supportEmail: config.supportEmail,
+      siteName: config.siteName,
+    });
+    await queueScheduledEmail({
+      type: "EVALUATION_PAYMENT_FOLLOWUP",
+      toEmail: to,
+      subject: tpl.subject,
+      body: tpl.textBody,
+      ...(params.evaluationId ? { evaluationId: params.evaluationId } : {}),
+      ...(params.userId ? { userId: params.userId } : {}),
+      ...(params.submitKey ? { idempotencyKey: `evaluation_submitted:${params.submitKey}` } : {}),
+    });
+  } catch (e) {
+    console.error("EVALUATION_SUBMITTED_CLIENT_EMAIL_QUEUE_FAILED", { to, e });
+  }
+}
+
 export async function POST(req: Request) {
   if (await isDeadlinePassedEnabled()) {
     return NextResponse.redirect(new URL("/evaluation-deadline-passed", req.url), 303);
@@ -180,6 +212,13 @@ export async function POST(req: Request) {
         });
       }
     }
+    await queueEvaluationSubmittedEmail({
+      toEmail: customerEmail,
+      customerName,
+      evaluationId: pendingDraft?.id ?? null,
+      userId,
+      submitKey: `${pendingDraft?.id || "no_eval"}:softblock`,
+    });
     return NextResponse.redirect(new URL("/evaluation-submitted", req.url), 303);
   }
 
@@ -348,6 +387,18 @@ export async function POST(req: Request) {
   if (quoteListEmail) {
     await unmarkQuoteRecipientEmailSent(quoteListEmail).catch(() => {});
   }
+
+  const submitter = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, fullName: true },
+  });
+  await queueEvaluationSubmittedEmail({
+    toEmail: submitter?.email,
+    customerName: submitter?.fullName,
+    evaluationId: evaluation.id,
+    userId,
+    submitKey: `${evaluation.id}:submitted`,
+  });
 
   return NextResponse.redirect(new URL("/evaluation-submitted", req.url));
 }

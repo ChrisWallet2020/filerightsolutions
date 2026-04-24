@@ -100,7 +100,7 @@ const TEMPLATE_DEFS: Record<TemplateKind, ClientEmailTemplateDef> = {
   },
   EVALUATION_PAYMENT_FOLLOWUP: {
     kind: "EVALUATION_PAYMENT_FOLLOWUP",
-    title: "Evaluation payment follow-up",
+    title: "Evaluation Submitted",
     subject: "Your 1701A evaluation is received — payment link",
     textBody: [
       "Hello {{customerName}},",

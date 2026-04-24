@@ -45,20 +45,6 @@ export async function POST(req: Request) {
   let retried = 0;
 
   for (const e of batch) {
-    if (e.type === "EVALUATION_PAYMENT_FOLLOWUP") {
-      await prisma.scheduledEmail.update({
-        where: { id: e.id },
-        data: {
-          failedAt: new Date(),
-          failReason: "disabled_template_type",
-          lastAttemptAt: new Date(),
-          attemptCount: { increment: 1 },
-        },
-      });
-      failed += 1;
-      continue;
-    }
-
     if (await isSuppressedEmail(e.toEmail)) {
       suppressed += 1;
       await prisma.scheduledEmail.update({

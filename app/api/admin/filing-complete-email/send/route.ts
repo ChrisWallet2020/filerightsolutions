@@ -5,8 +5,7 @@ import { getProcessor2SessionInfo, isAdminAuthed, isProcessor2Authed } from "@/l
 import { recordProcessor2FilingEmail } from "@/lib/processorCompensationLedger";
 import { findUserForFilingCompleteNotifyByEmail } from "@/lib/admin/findUserForFilingCompleteNotify";
 import { buildFilingCompleteNotifyEmail, firstNameFromFullName } from "@/lib/email/filingCompleteNotifyEmail";
-import { sendMail } from "@/lib/email/mailer";
-import { smtpSendContext } from "@/lib/smtpSendContext";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 
 const Body = z.object({
   email: z.string().email(),
@@ -28,17 +27,20 @@ export async function POST(req: Request) {
   }
 
   const firstName = firstNameFromFullName(user.fullName);
-  const { subject, textBody, htmlBody } = await buildFilingCompleteNotifyEmail(firstName);
-  const mailCtx = smtpSendContext();
+  const { subject, textBody } = await buildFilingCompleteNotifyEmail(firstName);
   const sentAt = new Date();
 
   try {
-    await sendMail(user.email, subject, textBody, htmlBody, {
-      ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
-      ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
+    await queueScheduledEmail({
+      type: "FILING_COMPLETE_NOTIFY",
+      toEmail: user.email,
+      subject,
+      body: textBody,
+      userId: user.id,
+      idempotencyKey: `filing_complete_notify:${user.id}:${sentAt.toISOString()}`,
     });
   } catch (e) {
-    console.error("FILING_COMPLETE_NOTIFY_SEND_FAILED:", e);
+    console.error("FILING_COMPLETE_NOTIFY_QUEUE_FAILED:", e);
     return NextResponse.json({ error: "send_failed" }, { status: 500 });
   }
 

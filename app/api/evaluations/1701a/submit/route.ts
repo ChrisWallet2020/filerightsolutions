@@ -10,6 +10,7 @@ import { clientEmailBranding } from "@/lib/email/clientEmailBranding";
 import { config } from "@/lib/config";
 import { getSalesFeesLimits, isDeadlinePassedEnabled, isHighVolumeEnabled } from "@/lib/siteSettings";
 import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 import {
   joinTextParagraphs,
   textToEmailHtmlParagraphs,
@@ -18,6 +19,36 @@ import {
 import { unmarkQuoteRecipientEmailSent } from "@/lib/admin/quoteSentRecipients";
 
 type AnyObj = Record<string, unknown>;
+
+async function queueEvaluationSubmittedEmail(params: {
+  toEmail: string | null | undefined;
+  customerName: string | null | undefined;
+  evaluationId?: string | null;
+  userId?: string | null;
+  submitKey?: string | null;
+}): Promise<void> {
+  const to = String(params.toEmail || "").trim();
+  if (!to) return;
+  try {
+    const tpl = await renderClientEmailTemplate("EVALUATION_PAYMENT_FOLLOWUP", {
+      customerName: params.customerName?.trim() || "Client",
+      paymentUrl: `${config.baseUrl}/account/payment`,
+      supportEmail: config.supportEmail,
+      siteName: config.siteName,
+    });
+    await queueScheduledEmail({
+      type: "EVALUATION_PAYMENT_FOLLOWUP",
+      toEmail: to,
+      subject: tpl.subject,
+      body: tpl.textBody,
+      ...(params.evaluationId ? { evaluationId: params.evaluationId } : {}),
+      ...(params.userId ? { userId: params.userId } : {}),
+      ...(params.submitKey ? { idempotencyKey: `evaluation_submitted:${params.submitKey}` } : {}),
+    });
+  } catch (e) {
+    console.error("EVALUATION_SUBMITTED_CLIENT_EMAIL_QUEUE_FAILED", { to, e });
+  }
+}
 
 function parseAmountLikeInput(v: unknown): number | null {
   if (typeof v !== "string") return null;
@@ -80,18 +111,6 @@ function isBlockedAtc(payload: AnyObj): boolean {
 
 function shouldSoftBlockSubmission(payload: AnyObj): boolean {
   return isGradOsdSelected(payload) || isBlockedAtc(payload);
-}
-
-function addBusinessDays(start: Date, businessDays: number): Date {
-  const d = new Date(start);
-  let added = 0;
-  while (added < businessDays) {
-    d.setDate(d.getDate() + 1);
-    const day = d.getDay();
-    // 0 = Sunday, 6 = Saturday
-    if (day !== 0 && day !== 6) added += 1;
-  }
-  return d;
 }
 
 function safeParseObject(raw: unknown): AnyObj {
@@ -238,6 +257,13 @@ export async function POST(req: Request) {
       await prisma.evaluation.update({
         where: { id: evalRow.id },
         data: { payloadJson },
+      });
+      await queueEvaluationSubmittedEmail({
+        toEmail: customerEmail,
+        customerName,
+        evaluationId: evalRow.id,
+        userId,
+        submitKey: `${evalRow.id}:softblock`,
       });
       return NextResponse.json({ ok: true, redirect: "/evaluation-submitted" });
     }
@@ -434,52 +460,13 @@ Account email: ${evalRow.user?.email ?? "(unknown)"}`,
       }
     }
 
-    // Queue a client follow-up email (next business day) with a login-protected payment link.
-    // Currently disabled by policy: keep template editable in admin, but do not enqueue for delivery.
-    try {
-      const evaluationPaymentFollowupEnabled = false;
-      if (!evaluationPaymentFollowupEnabled) {
-        return NextResponse.json({ ok: true });
-      }
-      const customerEmail = evalRow.user?.email?.trim();
-      const customerName = evalRow.user?.fullName?.trim() || "Client";
-      if (customerEmail) {
-        const paymentUrl = `${config.baseUrl}/account/payment`;
-        const sendAt = addBusinessDays(new Date(), 1);
-
-        const existingQueued = await prisma.scheduledEmail.findFirst({
-          where: {
-            type: "EVALUATION_PAYMENT_FOLLOWUP",
-            evaluationId: evalRow.id,
-            userId: userId,
-            sentAt: null,
-            failedAt: null,
-          },
-          select: { id: true },
-        });
-
-        if (!existingQueued) {
-          const followupTpl = await renderClientEmailTemplate("EVALUATION_PAYMENT_FOLLOWUP", {
-            customerName,
-            paymentUrl,
-            siteName: config.siteName,
-          });
-          await prisma.scheduledEmail.create({
-            data: {
-              type: "EVALUATION_PAYMENT_FOLLOWUP",
-              toEmail: customerEmail,
-              subject: followupTpl.subject,
-              body: followupTpl.textBody,
-              sendAt,
-              evaluationId: evalRow.id,
-              userId: userId,
-            },
-          });
-        }
-      }
-    } catch (queueErr) {
-      console.error("EVALUATION_SUBMIT_QUEUE_EMAIL_FAILED:", queueErr);
-    }
+    await queueEvaluationSubmittedEmail({
+      toEmail: evalRow.user?.email,
+      customerName: evalRow.user?.fullName,
+      evaluationId: evalRow.id,
+      userId,
+      submitKey: `${evalRow.id}:${submitOrdinalForPdf}`,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

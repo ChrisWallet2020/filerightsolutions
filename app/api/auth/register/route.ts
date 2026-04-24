@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { config } from "@/lib/config";
 import { customerHasPaidService, processAgentReferralPipeline } from "@/lib/agentReferralsSync";
-import { sendMail } from "@/lib/email/mailer";
 import { renderClientEmailTemplate } from "@/lib/admin/clientEmailTemplates";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 
 function makeReferralCode(): string {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -131,13 +131,14 @@ export async function POST(req: Request) {
 
     const next = new URL("/register/email-sent", req.url);
     next.searchParams.set("email", email);
-    try {
-      await sendMail(email, tpl.subject, tpl.textBody, tpl.htmlBody);
-    } catch (mailErr) {
-      console.error("REGISTER_CONFIRM_EMAIL_FAILED:", mailErr);
-      next.searchParams.set("mail", "failed");
-    }
-
+    await queueScheduledEmail({
+      type: "REGISTER_WELCOME",
+      toEmail: email,
+      subject: tpl.subject,
+      body: tpl.textBody,
+      userId: newUser.id,
+      idempotencyKey: `register_welcome:${newUser.id}`,
+    });
     return NextResponse.redirect(next, 303);
   } catch (err) {
     console.error("REGISTER_ERROR:", err);

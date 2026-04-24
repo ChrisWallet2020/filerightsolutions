@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdminAuthed } from "@/lib/auth";
 import { buildAdminCustomClientEmail } from "@/lib/email/adminCustomClientEmail";
-import { sendMail } from "@/lib/email/mailer";
-import { smtpSendContext } from "@/lib/smtpSendContext";
+import { queueScheduledEmail } from "@/lib/email/scheduledQueue";
 
 const Body = z.object({
   email: z
@@ -27,23 +26,18 @@ export async function POST(req: Request) {
 
   const mail = buildAdminCustomClientEmail({ body: parsed.data.body });
   const to = parsed.data.email;
-  const mailCtx = smtpSendContext();
   try {
-    const result = await sendMail(to, parsed.data.subject, mail.textBody, mail.htmlBody, {
-      ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),
-      ...(!mailCtx.smtpFromEnv ? { fromOverride: mailCtx.fromOverrideWhenNoSmtpFrom } : {}),
+    await queueScheduledEmail({
+      type: "ADMIN_CUSTOM_CLIENT_EMAIL",
+      toEmail: to,
+      subject: parsed.data.subject,
+      body: mail.textBody,
     });
-    if (result.messageId === "DEV_LOG_ONLY") {
-      return NextResponse.json(
-        { ok: true, to, messageId: result.messageId, devLogOnly: true },
-        { status: 200 }
-      );
-    }
-    console.info("ADMIN_CUSTOM_CLIENT_EMAIL_OK", { to, messageId: result.messageId, bcc: Boolean(mailCtx.smtpBcc) });
+    console.info("ADMIN_CUSTOM_CLIENT_EMAIL_QUEUED", { to });
   } catch (err) {
-    console.error("ADMIN_CUSTOM_CLIENT_EMAIL_SEND_FAILED:", err);
+    console.error("ADMIN_CUSTOM_CLIENT_EMAIL_QUEUE_FAILED:", err);
     return NextResponse.json({ error: "send_failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, to });
+  return NextResponse.json({ ok: true, to, queued: true });
 }
