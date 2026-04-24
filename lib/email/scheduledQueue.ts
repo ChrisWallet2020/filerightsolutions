@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { kickScheduledEmailDispatch } from "@/lib/email/scheduledDispatchKick";
 
 export type QueueScheduledEmailInput = {
   type: string;
@@ -43,6 +44,9 @@ export async function queueScheduledEmail(input: QueueScheduledEmailInput): Prom
     },
     select: { id: true },
   });
+
+  // Best-effort immediate dispatch so queued emails do not wait for scheduler windows.
+  kickScheduledEmailDispatch("queueScheduledEmail");
 
   return { queued: true, id: created.id };
 }
