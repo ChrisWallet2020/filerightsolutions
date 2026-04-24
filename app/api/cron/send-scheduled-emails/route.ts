@@ -27,6 +27,26 @@ function isCronRequestAuthorized(req: Request): boolean {
   return Boolean(m && m[1]?.trim() === configured);
 }
 
+function splitStandardFooter(body: string): { mainBody: string; hasStandardFooter: boolean } {
+  const normalized = body.replace(/\r\n/g, "\n").trimEnd();
+  const footer = BILLING_EMAIL_FOOTER_TEXT.replace(/\r\n/g, "\n").trim();
+  if (!normalized.endsWith(footer)) {
+    return { mainBody: normalized, hasStandardFooter: false };
+  }
+  const main = normalized.slice(0, normalized.length - footer.length).replace(/\n+$/g, "");
+  return { mainBody: main, hasStandardFooter: true };
+}
+
+const CLIENT_TEMPLATE_SCHEDULED_TYPES = new Set<string>([
+  "REGISTER_WELCOME",
+  "PASSWORD_RESET",
+  "FILING_COMPLETE_NOTIFY",
+  "EVALUATION_PAYMENT_FOLLOWUP",
+  "EVALUATION_NO_REDUCTION_UPDATE",
+  "BIR_1701A_DEADLINE_REMINDER",
+  "ADMIN_CUSTOM_CLIENT_EMAIL",
+]);
+
 export async function POST(req: Request) {
   if (!isCronRequestAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -80,10 +100,11 @@ export async function POST(req: Request) {
     if (lock.count === 0) continue;
 
     try {
-      const shouldUseBillingFooter = e.type === "EVALUATION_NO_REDUCTION_UPDATE";
-      const textBody = shouldUseBillingFooter ? `${e.body}\n\n${BILLING_EMAIL_FOOTER_TEXT}` : e.body;
+      const { mainBody, hasStandardFooter } = splitStandardFooter(e.body);
+      const shouldUseBillingFooter = CLIENT_TEMPLATE_SCHEDULED_TYPES.has(e.type) || hasStandardFooter;
+      const textBody = shouldUseBillingFooter && !hasStandardFooter ? `${e.body}\n\n${BILLING_EMAIL_FOOTER_TEXT}` : e.body;
       const htmlInner = shouldUseBillingFooter
-        ? `${textToEmailHtmlParagraphs(e.body)}${billingEmailFooterHtml()}`
+        ? `${textToEmailHtmlParagraphs(mainBody)}${billingEmailFooterHtml()}`
         : textToEmailHtmlParagraphs(e.body);
       const htmlBody = wrapEmailMainHtml(htmlInner, clientEmailBranding());
       const idempotencyKey = e.idempotencyKey || `scheduled:${e.id}`;
