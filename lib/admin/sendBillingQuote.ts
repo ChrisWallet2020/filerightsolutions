@@ -93,6 +93,14 @@ function buildProviderSafeFallbackEmail(opts: {
   return { subject, textBody, htmlBody };
 }
 
+function sanitizeAttachmentFilename(name: string, fallback: string): string {
+  const cleaned = String(name || "")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "_")
+    .replace(/\s+/g, " ");
+  return cleaned || fallback;
+}
+
 export type SendBillingQuoteResult = {
   ok: boolean;
   code: "ok" | "user_not_found" | "evaluation_not_submitted" | "attachments_incomplete";
@@ -150,6 +158,16 @@ export async function sendBillingQuoteToUserEmail(params: {
       usedFallbackSend: false,
     };
   }
+  // Ensure deterministic, unique outbound filenames for quote images across providers/clients.
+  // Some clients/providers may collapse duplicate names and appear to "drop" attachments.
+  uploadedImages = uploadedImages.map((img, i) => {
+    const slot = i + 1;
+    const fallbackName = `quote-image-${slot}`;
+    const base = sanitizeAttachmentFilename(img.filename, fallbackName);
+    const hasSlotPrefix = /^quote-image-\d+\s*-\s*/i.test(base);
+    const filename = hasSlotPrefix ? base : `quote-image-${slot} - ${base}`;
+    return { ...img, filename };
+  });
 
   const autoBaseAmountPhp = await getAutoBillingBaseAmountForUser(user.id);
   const overrideFee = params.serviceFeeOverridePhp;
@@ -195,6 +213,11 @@ export async function sendBillingQuoteToUserEmail(params: {
   let usedFallbackSend = false;
 
   try {
+    console.info("BILLING_QUOTE_SEND_ATTACHMENTS", {
+      to: user.email,
+      count: emailAttachments.length,
+      filenames: emailAttachments.map((a) => a.filename),
+    });
     const result = await sendMail(user.email, subject, textBody, htmlBody, {
       attachments: emailAttachments,
       ...(mailCtx.smtpBcc ? { bcc: mailCtx.smtpBcc } : {}),

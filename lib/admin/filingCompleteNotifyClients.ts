@@ -13,6 +13,10 @@ function extractTinFromPayloadJson(payloadJson: string | null | undefined): stri
   if (!payloadJson) return null;
   try {
     const parsed = JSON.parse(payloadJson) as Record<string, unknown>;
+    const parts = [parsed.tin1, parsed.tin2, parsed.tin3, parsed.tin4]
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter((v) => v.length > 0);
+    if (parts.length > 0) return parts.join("-");
     const rawTin = typeof parsed.tin === "string" ? parsed.tin.trim() : "";
     return rawTin || null;
   } catch {

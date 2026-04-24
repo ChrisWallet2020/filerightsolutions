@@ -53,18 +53,18 @@ export default async function PaymentStatusPage({
           pollUntilPaid={pollUntilPaid}
         />
       ) : null}
-      <h1>Payment Status</h1>
-      <p className="muted">
+      <h1 style={{ fontSize: 16, lineHeight: 1.3, margin: "0 0 10px", fontWeight: 700 }}>Payment Status</h1>
+      <p className="muted" style={{ fontSize: 14, lineHeight: 1.65, marginTop: 0 }}>
         Order ID: <strong>{orderId || "—"}</strong>
       </p>
       <div className="notice">
-        <p>
+        <p style={{ fontSize: 14, lineHeight: 1.65, margin: 0 }}>
           Your payment is currently marked as <strong>{state}</strong>.
           For accuracy, payment confirmation is finalized when our system receives the payment notification from our
           payment gateway.
         </p>
       </div>
-      <p className="muted">
+      <p className="muted" style={{ fontSize: 14, lineHeight: 1.65 }}>
         If you have concerns, contact support and include your Order ID.
       </p>
 
@@ -79,14 +79,14 @@ export default async function PaymentStatusPage({
               background: "#1e40af",
               color: "#fff",
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 14,
               textDecoration: "none",
             }}
           >
             Back to payment details
           </Link>
         ) : null}
-        <Link href="/account" style={{ fontWeight: 600, color: "#1d4ed8", fontSize: 15 }}>
+        <Link href="/account" style={{ fontWeight: 600, color: "#1d4ed8", fontSize: 14 }}>
           ← Account dashboard
         </Link>
         {!quotePaymentHref && orderId.trim() ? (
