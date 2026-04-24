@@ -74,6 +74,9 @@ export async function POST(req: Request) {
     if (msg === "duplicate_workspace_filename") {
       return NextResponse.json({ error: "duplicate_workspace_filename" }, { status: 400 });
     }
+    if (msg === "no_active_submission") {
+      return NextResponse.json({ error: "no_active_submission" }, { status: 400 });
+    }
     console.error("payment-quotes/staging-slot", e);
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
   }

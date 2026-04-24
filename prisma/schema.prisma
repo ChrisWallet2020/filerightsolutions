@@ -249,6 +249,7 @@ model FilingCompleteNotifySend {
 model PaymentQuoteImageStaging {
   id          String   @id @default(cuid())
   clientEmail String
+  submissionId String
   slot        Int
   data        Bytes
   filename    String
@@ -261,8 +262,11 @@ model PaymentQuoteImageStaging {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([clientEmail, slot])
+  submission Evaluation1701ASubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([clientEmail, submissionId, slot])
   @@index([clientEmail])
+  @@index([submissionId])
 }
 
 model PaymentQuote {
@@ -373,6 +377,8 @@ model Evaluation1701ASubmission {
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
+
+  quoteImageStagingRows PaymentQuoteImageStaging[]
 
   @@index([userId, createdAt])
   @@index([createdAt])

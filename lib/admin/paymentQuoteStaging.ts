@@ -10,6 +10,11 @@ export type StagingSlotPublic = {
   uploadedBy?: string;
 };
 
+export type ActiveSubmissionContext = {
+  submissionId: string;
+  submittedAt: Date;
+};
+
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
@@ -24,6 +29,36 @@ export function normalizeQuoteClientEmail(raw: string) {
   return raw.trim().toLowerCase();
 }
 
+export async function getActiveSubmissionContextForClientEmail(
+  clientEmail: string
+): Promise<ActiveSubmissionContext | null> {
+  const email = normalizeQuoteClientEmail(clientEmail);
+  const latest = await prisma.evaluation1701ASubmission.findFirst({
+    where: {
+      user: {
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: { id: true, createdAt: true },
+  });
+  if (!latest) return null;
+  return { submissionId: latest.id, submittedAt: latest.createdAt };
+}
+
+async function deleteSupersededStagingRows(clientEmail: string, activeSubmissionId: string): Promise<void> {
+  const email = normalizeQuoteClientEmail(clientEmail);
+  await prisma.paymentQuoteImageStaging.deleteMany({
+    where: {
+      clientEmail: email,
+      submissionId: { not: activeSubmissionId },
+    },
+  });
+}
+
 function normalizeUploadedFilename(raw: string) {
   return raw.trim().toLowerCase();
 }
@@ -34,10 +69,13 @@ export async function quoteImageStagingLastSavedAt(
   role: QuoteUploaderRole,
 ): Promise<Date | null> {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) return null;
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const slotNums =
     role === "processor2" ? [3, 4] : role === "processor1" ? [1, 2] : [1, 2, 3, 4];
   const agg = await prisma.paymentQuoteImageStaging.aggregate({
-    where: { clientEmail: email, slot: { in: slotNums } },
+    where: { clientEmail: email, submissionId: activeSubmission.submissionId, slot: { in: slotNums } },
     _max: { updatedAt: true },
   });
   return agg._max.updatedAt ?? null;
@@ -59,6 +97,9 @@ export async function saveStagingSlot(params: {
   uploadedByActorKey?: string | null;
 }) {
   const email = normalizeQuoteClientEmail(params.clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) throw new Error("no_active_submission");
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   assertSlotAllowedForRole(params.slot, params.uploadedBy);
   if (params.slot < 1 || params.slot > 4) throw new Error("bad_slot");
   if (params.data.length > MAX_BYTES) throw new Error("too_large");
@@ -87,9 +128,16 @@ export async function saveStagingSlot(params: {
       : null;
 
   await prisma.paymentQuoteImageStaging.upsert({
-    where: { clientEmail_slot: { clientEmail: email, slot: params.slot } },
+    where: {
+      clientEmail_submissionId_slot: {
+        clientEmail: email,
+        submissionId: activeSubmission.submissionId,
+        slot: params.slot,
+      },
+    },
     create: {
       clientEmail: email,
+      submissionId: activeSubmission.submissionId,
       slot: params.slot,
       data: params.data,
       filename: params.filename.slice(0, 500),
@@ -109,8 +157,13 @@ export async function saveStagingSlot(params: {
 
 export async function listStagingSlotsForViewer(clientEmail: string): Promise<StagingSlotPublic[]> {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) {
+    return [1, 2, 3, 4].map((s) => ({ slot: s as 1 | 2 | 3 | 4, present: false }));
+  }
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email },
+    where: { clientEmail: email, submissionId: activeSubmission.submissionId },
     select: { slot: true, filename: true, uploadedBy: true },
   });
   const bySlot = new Map(rows.map((r) => [r.slot, r]));
@@ -133,13 +186,17 @@ export async function listStagingSlotsForViewer(clientEmail: string): Promise<St
 
 export async function loadStagingSlotImage(params: { clientEmail: string; slot: number }) {
   const email = normalizeQuoteClientEmail(params.clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) throw new Error("not_found");
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   if (!Number.isInteger(params.slot) || params.slot < 1 || params.slot > 4) {
     throw new Error("bad_slot");
   }
   const row = await prisma.paymentQuoteImageStaging.findUnique({
     where: {
-      clientEmail_slot: {
+      clientEmail_submissionId_slot: {
         clientEmail: email,
+        submissionId: activeSubmission.submissionId,
         slot: params.slot,
       },
     },
@@ -165,8 +222,11 @@ export async function isStagingReadyForSidePreview(
   const need: number[] =
     role === "processor2" ? [3, 4] : role === "processor1" ? [1, 2] : [1, 2, 3, 4];
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) return false;
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email, slot: { in: need } },
+    where: { clientEmail: email, submissionId: activeSubmission.submissionId, slot: { in: need } },
     select: { slot: true },
   });
   const have = new Set(rows.map((r) => r.slot));
@@ -176,8 +236,13 @@ export async function isStagingReadyForSidePreview(
 /** All four slots, with nulls for missing rows (preview HTML only). */
 export async function loadStagingSlotsForPreview(clientEmail: string): Promise<PreviewSlotRow[]> {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) {
+    return [1, 2, 3, 4].map((s) => ({ slot: s, missing: true as const }));
+  }
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email },
+    where: { clientEmail: email, submissionId: activeSubmission.submissionId },
     orderBy: { slot: "asc" },
   });
   const bySlot = new Map(rows.map((r) => [r.slot, r]));
@@ -202,8 +267,11 @@ export async function loadStagingSlotsForPreview(clientEmail: string): Promise<P
 
 export async function isStagingComplete(clientEmail: string) {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) return false;
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email },
+    where: { clientEmail: email, submissionId: activeSubmission.submissionId },
     select: { slot: true },
   });
   const slots = new Set(rows.map((r) => r.slot));
@@ -212,8 +280,15 @@ export async function isStagingComplete(clientEmail: string) {
 
 export async function isStagingCompleteForSendFromProcessors(clientEmail: string): Promise<boolean> {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) return false;
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email, slot: { in: [1, 2, 3, 4] } },
+    where: {
+      clientEmail: email,
+      submissionId: activeSubmission.submissionId,
+      slot: { in: [1, 2, 3, 4] },
+    },
     select: { slot: true, uploadedBy: true },
   });
   const bySlot = new Map(rows.map((r) => [r.slot, r.uploadedBy]));
@@ -225,25 +300,41 @@ export async function isStagingCompleteForSendFromProcessors(clientEmail: string
   );
 }
 
-export async function loadStagingImagesForSend(clientEmail: string): Promise<CollectedBillingImage[]> {
+export async function loadStagingImagesForSend(clientEmail: string): Promise<{
+  submissionId: string;
+  submittedAt: Date;
+  images: CollectedBillingImage[];
+  stagingRowIds: string[];
+}> {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) throw new Error("staging_incomplete");
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email },
+    where: { clientEmail: email, submissionId: activeSubmission.submissionId },
     orderBy: { slot: "asc" },
+    select: { id: true, slot: true, filename: true, mimeType: true, data: true },
   });
   if (rows.length < 4) throw new Error("staging_incomplete");
   const bySlot = new Map(rows.map((r) => [r.slot, r]));
   const ordered: CollectedBillingImage[] = [];
+  const rowIds: string[] = [];
   for (let s = 1; s <= 4; s++) {
     const r = bySlot.get(s);
     if (!r) throw new Error("staging_incomplete");
+    rowIds.push(r.id);
     ordered.push({
       filename: r.filename,
       contentType: r.mimeType,
       content: Buffer.from(r.data),
     });
   }
-  return ordered;
+  return {
+    submissionId: activeSubmission.submissionId,
+    submittedAt: activeSubmission.submittedAt,
+    images: ordered,
+    stagingRowIds: rowIds,
+  };
 }
 
 export type StagingCompensationSlot = {
@@ -258,8 +349,15 @@ export type StagingCompensationSlot = {
  */
 export async function loadStagingCompensationSlots(clientEmail: string): Promise<StagingCompensationSlot[]> {
   const email = normalizeQuoteClientEmail(clientEmail);
+  const activeSubmission = await getActiveSubmissionContextForClientEmail(email);
+  if (!activeSubmission) return [];
+  await deleteSupersededStagingRows(email, activeSubmission.submissionId);
   const rows = await prisma.paymentQuoteImageStaging.findMany({
-    where: { clientEmail: email, slot: { in: [1, 2, 3, 4] } },
+    where: {
+      clientEmail: email,
+      submissionId: activeSubmission.submissionId,
+      slot: { in: [1, 2, 3, 4] },
+    },
     orderBy: { slot: "asc" },
     select: { slot: true, uploadedBy: true, uploadedByActorKey: true },
   });

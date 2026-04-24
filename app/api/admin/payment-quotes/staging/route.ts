@@ -3,10 +3,12 @@ import { z } from "zod";
 import { isPaymentQuoteOperatorAuthed, quoteSlotRoleFromRequest } from "@/lib/admin/paymentQuoteAccess";
 import {
   deleteStagingForClientEmail,
+  getActiveSubmissionContextForClientEmail,
   listStagingSlotsForViewer,
   normalizeQuoteClientEmail,
   quoteImageStagingLastSavedAt,
 } from "@/lib/admin/paymentQuoteStaging";
+import { prisma } from "@/lib/db";
 
 const EmailParam = z.object({
   clientEmail: z.string().email(),
@@ -22,13 +24,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "invalid_client_email" }, { status: 400 });
   }
   const clientEmail = parsed.data.clientEmail;
-  const [slots, lastSavedAt] = await Promise.all([
+  const active = await getActiveSubmissionContextForClientEmail(clientEmail);
+  const [slots, lastSavedAt, supersededCount] = await Promise.all([
     listStagingSlotsForViewer(clientEmail),
     quoteImageStagingLastSavedAt(clientEmail, quoteSlotRoleFromRequest(req)),
+    active
+      ? prisma.paymentQuoteImageStaging.count({
+          where: {
+            clientEmail: normalizeQuoteClientEmail(clientEmail),
+            submissionId: { not: active.submissionId },
+          },
+        })
+      : Promise.resolve(0),
   ]);
   return NextResponse.json({
     slots,
     lastSavedAt: lastSavedAt ? lastSavedAt.toISOString() : null,
+    activeSubmissionId: active?.submissionId ?? null,
+    activeSubmissionSubmittedAt: active?.submittedAt?.toISOString() ?? null,
+    hasSupersededStagingRows: supersededCount > 0,
   });
 }
 

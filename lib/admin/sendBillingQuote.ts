@@ -145,8 +145,13 @@ export async function sendBillingQuoteToUserEmail(params: {
   }
 
   let uploadedImages: CollectedBillingImage[] = [];
+  let stagingSubmissionId: string | null = null;
+  let stagingRowIds: string[] = [];
   try {
-    uploadedImages = await loadStagingImagesForSend(email);
+    const staging = await loadStagingImagesForSend(email);
+    uploadedImages = staging.images;
+    stagingSubmissionId = staging.submissionId;
+    stagingRowIds = staging.stagingRowIds;
   } catch {
     return {
       ok: false,
@@ -264,6 +269,23 @@ export async function sendBillingQuoteToUserEmail(params: {
 
   // Remove client from quote dropdown only after verified successful delivery.
   if (emailSent && !emailError) {
+    try {
+      await prisma.adminAudit.create({
+        data: {
+          action: "QUOTE_EMAIL_SENT_SNAPSHOT",
+          details: JSON.stringify({
+            userId: user.id,
+            clientEmail: email,
+            submissionId: stagingSubmissionId,
+            stagingRowIds,
+            usedFallbackSend,
+          }),
+        },
+      });
+    } catch (auditErr) {
+      console.error("QUOTE_SEND_SNAPSHOT_AUDIT_FAILED", auditErr);
+    }
+
     // Compensate processors only when the client actually received the email with quote images
     // (not the text-only spam-filter fallback).
     if (!usedFallbackSend) {

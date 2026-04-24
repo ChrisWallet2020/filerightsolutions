@@ -124,6 +124,8 @@ export function BillingQuoteForm({
   const [slotImageUrls, setSlotImageUrls] = useState<Partial<Record<number, string>>>({});
   /** ISO timestamp: max staging `updatedAt` for this dashboard's slots and client (from GET staging). */
   const [quoteImagesLastSavedAt, setQuoteImagesLastSavedAt] = useState<string | null>(null);
+  const [hasSupersededStagingRows, setHasSupersededStagingRows] = useState(false);
+  const [activeSubmissionSubmittedAt, setActiveSubmissionSubmittedAt] = useState<string | null>(null);
   const [sendAllBanner, setSendAllBanner] = useState<string | null>(null);
   const [sendAllBannerTone, setSendAllBannerTone] = useState<"success" | "warn" | "error">("success");
   const [sendAllJob, setSendAllJob] = useState<SendAllJob | null>(null);
@@ -137,6 +139,8 @@ export function BillingQuoteForm({
       if (!em) {
         setSlots(null);
         setQuoteImagesLastSavedAt(null);
+        setHasSupersededStagingRows(false);
+        setActiveSubmissionSubmittedAt(null);
         return { ok: false, slots: null };
       }
       try {
@@ -147,17 +151,30 @@ export function BillingQuoteForm({
         if (!res.ok) {
           setStagingErr("Could not load quote image status. Try again.");
           setQuoteImagesLastSavedAt(null);
+          setHasSupersededStagingRows(false);
+          setActiveSubmissionSubmittedAt(null);
           return { ok: false, slots: null };
         }
-        const data = (await res.json()) as { slots?: StagingSlotPublic[]; lastSavedAt?: string | null };
+        const data = (await res.json()) as {
+          slots?: StagingSlotPublic[];
+          lastSavedAt?: string | null;
+          hasSupersededStagingRows?: boolean;
+          activeSubmissionSubmittedAt?: string | null;
+        };
         const list = Array.isArray(data.slots) ? data.slots : [];
         setSlots(list);
         setQuoteImagesLastSavedAt(typeof data.lastSavedAt === "string" ? data.lastSavedAt : null);
+        setHasSupersededStagingRows(Boolean(data.hasSupersededStagingRows));
+        setActiveSubmissionSubmittedAt(
+          typeof data.activeSubmissionSubmittedAt === "string" ? data.activeSubmissionSubmittedAt : null
+        );
         setStagingErr(null);
         return { ok: true, slots: list };
       } catch {
         setStagingErr("Could not load quote image status. Check your connection.");
         setQuoteImagesLastSavedAt(null);
+        setHasSupersededStagingRows(false);
+        setActiveSubmissionSubmittedAt(null);
         return { ok: false, slots: null };
       }
     },
@@ -168,6 +185,8 @@ export function BillingQuoteForm({
     setCommittedClientEmail(email);
     setSlots(null);
     setQuoteImagesLastSavedAt(null);
+    setHasSupersededStagingRows(false);
+    setActiveSubmissionSubmittedAt(null);
     setPreviewHtml(null);
     setPreviewBanner(null);
     setSendBanner(null);
@@ -353,6 +372,8 @@ export function BillingQuoteForm({
                 ? "Each image must be 10MB or smaller."
                 : code === "duplicate_workspace_filename"
                   ? "Use a different filename for the other image in your workspace."
+                  : code === "no_active_submission"
+                    ? "No active 1701A submission was found for this client. Ask the client to submit/resubmit first."
                 : "Upload failed. Try again.",
         );
         return;
@@ -618,6 +639,16 @@ export function BillingQuoteForm({
             void handleSend(ev);
           }}
         >
+          {hasSupersededStagingRows ? (
+            <div className="adminNotice adminNotice--warn" style={{ marginBottom: 14 }}>
+              <strong className="adminNoticeTitle">Quote images</strong>
+              <p className="adminNoticeBody">
+                New resubmission detected
+                {activeSubmissionSubmittedAt ? ` (${formatQuoteImagesLastSaved(activeSubmissionSubmittedAt)})` : ""} -
+                attachments must be refreshed for this submission before sending.
+              </p>
+            </div>
+          ) : null}
           <label className="adminLabel">
             <strong>Client Name</strong>
             <AdminClientEmailCombobox

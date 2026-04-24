@@ -24,6 +24,11 @@ export async function getSubmitted1701aClientOptions(): Promise<{
     select: {
       email: true,
       fullName: true,
+      evaluation1701ASubmissions: {
+        orderBy: [{ createdAt: "desc" }],
+        take: 1,
+        select: { id: true, createdAt: true },
+      },
       paymentQuotes: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -32,11 +37,49 @@ export async function getSubmitted1701aClientOptions(): Promise<{
     },
     orderBy: [{ fullName: "asc" }, { email: "asc" }],
   });
+  const emails = [...new Set(users.map((u) => u.email.trim().toLowerCase()).filter(Boolean))];
+  const stagingRows = emails.length
+    ? await prisma.paymentQuoteImageStaging.findMany({
+        where: { clientEmail: { in: emails } },
+        select: { clientEmail: true, submissionId: true, slot: true, uploadedBy: true },
+      })
+    : [];
+
+  const stagingByEmailAndSubmission = new Map<string, Map<number, { uploadedBy: string }>>();
+  for (const row of stagingRows) {
+    const key = `${row.clientEmail.trim().toLowerCase()}::${row.submissionId}`;
+    const cur = stagingByEmailAndSubmission.get(key) ?? new Map<number, { uploadedBy: string }>();
+    cur.set(row.slot, { uploadedBy: row.uploadedBy });
+    stagingByEmailAndSubmission.set(key, cur);
+  }
+
   return users
-    .map((u) => ({
-      email: u.email.trim(),
-      fullName: u.fullName.trim(),
-      lastQuoteSentAt: u.paymentQuotes[0]?.createdAt?.toISOString() ?? null,
-    }))
-    .filter((u) => !sentRecipients.has(u.email.toLowerCase()));
+    .map((u) => {
+      const email = u.email.trim();
+      const emailKey = email.toLowerCase();
+      const latestSubmission = u.evaluation1701ASubmissions[0] ?? null;
+      const latestSubmissionId = latestSubmission?.id ?? null;
+      const submissionScope = latestSubmissionId
+        ? stagingByEmailAndSubmission.get(`${emailKey}::${latestSubmissionId}`)
+        : null;
+      const slot1 = submissionScope?.get(1);
+      const slot2 = submissionScope?.get(2);
+      const slot3 = submissionScope?.get(3);
+      const slot4 = submissionScope?.get(4);
+      const hasAllFourWithCorrectOwners = Boolean(
+        slot1?.uploadedBy === "processor1" &&
+          slot2?.uploadedBy === "processor1" &&
+          slot3?.uploadedBy === "processor2" &&
+          slot4?.uploadedBy === "processor2"
+      );
+      const eligibleForDropdown = hasAllFourWithCorrectOwners;
+      return {
+        email,
+        fullName: u.fullName.trim(),
+        lastQuoteSentAt: u.paymentQuotes[0]?.createdAt?.toISOString() ?? null,
+        eligibleForDropdown,
+      };
+    })
+    .filter((u) => !sentRecipients.has(u.email.toLowerCase()) && u.eligibleForDropdown)
+    .map(({ eligibleForDropdown: _eligibleForDropdown, ...u }) => u);
 }
