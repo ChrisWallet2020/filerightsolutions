@@ -17,9 +17,18 @@ import {
   retryDelayMinutesForAttempt,
 } from "@/lib/email/policy";
 
+function isCronRequestAuthorized(req: Request): boolean {
+  const configured = (process.env.CRON_KEY || process.env.CRON_SECRET || "").trim();
+  if (!configured) return true;
+  const headerKey = (req.headers.get("x-cron-key") || "").trim();
+  if (headerKey && headerKey === configured) return true;
+  const auth = (req.headers.get("authorization") || "").trim();
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return Boolean(m && m[1]?.trim() === configured);
+}
+
 export async function POST(req: Request) {
-  const key = req.headers.get("x-cron-key");
-  if (process.env.CRON_KEY && key !== process.env.CRON_KEY) {
+  if (!isCronRequestAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
