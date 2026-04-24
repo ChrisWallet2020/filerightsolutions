@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 export type AdminClientEmailOption = {
   email: string;
   fullName: string;
+  /** Optional client TIN for admin side panels. */
+  tin?: string | null;
   /** ISO 8601 — optional; filing confirmation UI uses for “last sent”. */
   lastFilingNotifySentAt?: string | null;
   /** ISO 8601 — optional; quote UI uses for “Last sent”. */

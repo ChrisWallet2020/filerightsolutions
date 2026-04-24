@@ -30,6 +30,7 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
   );
 
   const lastSentAt = selected?.lastFilingNotifySentAt ?? null;
+  const clientTin = selected?.tin?.trim() || null;
 
   function formatGmtPlus8(v: string): string {
     return new Intl.DateTimeFormat("en-PH", {
@@ -127,6 +128,11 @@ export function FilingCompleteEmailForm({ clients }: { clients: FilingCompleteNo
           {lastSentAt ? (
             <p className="muted adminBodyText">
               Last sent (GMT+8): <strong style={{ color: "var(--fg)" }}>{formatGmtPlus8(lastSentAt)}</strong>
+            </p>
+          ) : null}
+          {selected ? (
+            <p className="muted adminBodyText">
+              Client TIN: <strong style={{ color: "var(--fg)" }}>{clientTin || "Not available"}</strong>
             </p>
           ) : null}
 
