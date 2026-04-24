@@ -1,4 +1,4 @@
-import { getSubmitted1701aClientOptions } from "@/lib/admin/submittedClientOptions";
+import { getSubmitted1701aClientOptionsByScope } from "@/lib/admin/submittedClientOptions";
 import { BillingQuoteForm } from "@/components/admin/BillingQuoteForm";
 import type { QuoteUploaderRole } from "@/lib/admin/paymentQuoteStaging";
 
@@ -10,7 +10,9 @@ export async function QuoteWorkspace({
   /** Which dashboard this page is (slots 1–2 vs 3–4), independent of admin cookie. */
   quoteUploaderRole: QuoteUploaderRole;
 }) {
-  const submittedClients = await getSubmitted1701aClientOptions();
+  const submittedClients = await getSubmitted1701aClientOptionsByScope(
+    quoteUploaderRole === "admin" ? "admin" : "processor"
+  );
 
   const previewError = typeof searchParams.previewError === "string" ? searchParams.previewError.trim() : "";
   const quoteError = typeof searchParams.quoteError === "string" ? searchParams.quoteError.trim() : "";

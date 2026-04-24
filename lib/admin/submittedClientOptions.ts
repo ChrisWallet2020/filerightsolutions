@@ -16,6 +16,16 @@ export async function getSubmitted1701aClientOptions(): Promise<{
   fullName: string;
   lastQuoteSentAt: string | null;
 }[]> {
+  return getSubmitted1701aClientOptionsByScope("admin");
+}
+
+export async function getSubmitted1701aClientOptionsByScope(
+  scope: "admin" | "processor"
+): Promise<{
+  email: string;
+  fullName: string;
+  lastQuoteSentAt: string | null;
+}[]> {
   const sentRecipients = await getSentQuoteRecipientEmails();
   const users = await prisma.user.findMany({
     where: {
@@ -37,42 +47,47 @@ export async function getSubmitted1701aClientOptions(): Promise<{
     },
     orderBy: [{ fullName: "asc" }, { email: "asc" }],
   });
-  const emails = [...new Set(users.map((u) => u.email.trim().toLowerCase()).filter(Boolean))];
-  const stagingRows = emails.length
-    ? await prisma.paymentQuoteImageStaging.findMany({
-        where: { clientEmail: { in: emails } },
-        select: { clientEmail: true, submissionId: true, slot: true, uploadedBy: true },
-      })
-    : [];
-
   const stagingByEmailAndSubmission = new Map<string, Map<number, { uploadedBy: string }>>();
-  for (const row of stagingRows) {
-    const key = `${row.clientEmail.trim().toLowerCase()}::${row.submissionId}`;
-    const cur = stagingByEmailAndSubmission.get(key) ?? new Map<number, { uploadedBy: string }>();
-    cur.set(row.slot, { uploadedBy: row.uploadedBy });
-    stagingByEmailAndSubmission.set(key, cur);
+  if (scope === "admin") {
+    const emails = [...new Set(users.map((u) => u.email.trim().toLowerCase()).filter(Boolean))];
+    const stagingRows = emails.length
+      ? await prisma.paymentQuoteImageStaging.findMany({
+          where: { clientEmail: { in: emails } },
+          select: { clientEmail: true, submissionId: true, slot: true, uploadedBy: true },
+        })
+      : [];
+
+    for (const row of stagingRows) {
+      const key = `${row.clientEmail.trim().toLowerCase()}::${row.submissionId}`;
+      const cur = stagingByEmailAndSubmission.get(key) ?? new Map<number, { uploadedBy: string }>();
+      cur.set(row.slot, { uploadedBy: row.uploadedBy });
+      stagingByEmailAndSubmission.set(key, cur);
+    }
   }
 
   return users
     .map((u) => {
       const email = u.email.trim();
       const emailKey = email.toLowerCase();
-      const latestSubmission = u.evaluation1701ASubmissions[0] ?? null;
-      const latestSubmissionId = latestSubmission?.id ?? null;
-      const submissionScope = latestSubmissionId
-        ? stagingByEmailAndSubmission.get(`${emailKey}::${latestSubmissionId}`)
-        : null;
-      const slot1 = submissionScope?.get(1);
-      const slot2 = submissionScope?.get(2);
-      const slot3 = submissionScope?.get(3);
-      const slot4 = submissionScope?.get(4);
-      const hasAllFourWithCorrectOwners = Boolean(
-        slot1?.uploadedBy === "processor1" &&
-          slot2?.uploadedBy === "processor1" &&
-          slot3?.uploadedBy === "processor2" &&
-          slot4?.uploadedBy === "processor2"
-      );
-      const eligibleForDropdown = hasAllFourWithCorrectOwners;
+      let eligibleForDropdown = true;
+      if (scope === "admin") {
+        const latestSubmission = u.evaluation1701ASubmissions[0] ?? null;
+        const latestSubmissionId = latestSubmission?.id ?? null;
+        const submissionScope = latestSubmissionId
+          ? stagingByEmailAndSubmission.get(`${emailKey}::${latestSubmissionId}`)
+          : null;
+        const slot1 = submissionScope?.get(1);
+        const slot2 = submissionScope?.get(2);
+        const slot3 = submissionScope?.get(3);
+        const slot4 = submissionScope?.get(4);
+        const hasAllFourWithCorrectOwners = Boolean(
+          slot1?.uploadedBy === "processor1" &&
+            slot2?.uploadedBy === "processor1" &&
+            slot3?.uploadedBy === "processor2" &&
+            slot4?.uploadedBy === "processor2"
+        );
+        eligibleForDropdown = hasAllFourWithCorrectOwners;
+      }
       return {
         email,
         fullName: u.fullName.trim(),
