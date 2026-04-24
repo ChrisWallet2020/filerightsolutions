@@ -179,6 +179,7 @@ export async function POST(req: Request) {
     });
     const customerEmail = user?.email?.trim();
     const customerName = user?.fullName?.trim() || "Client";
+    let pendingDraftId: string | null = null;
     if (customerEmail) {
       const noReductionTpl = await renderClientEmailTemplate("EVALUATION_NO_REDUCTION_UPDATE", {
         customerName,
@@ -188,10 +189,11 @@ export async function POST(req: Request) {
         orderBy: { createdAt: "desc" },
         select: { id: true },
       });
+      pendingDraftId = pendingDraft?.id ?? null;
       const existingQueued = await prisma.scheduledEmail.findFirst({
         where: {
           type: "EVALUATION_NO_REDUCTION_UPDATE",
-          evaluationId: pendingDraft?.id ?? null,
+          evaluationId: pendingDraftId,
           userId,
           sentAt: null,
           failedAt: null,
@@ -206,7 +208,7 @@ export async function POST(req: Request) {
             subject: noReductionTpl.subject,
             body: noReductionTpl.textBody,
             sendAt: nextDayAtNineAM(new Date()),
-            ...(pendingDraft?.id ? { evaluationId: pendingDraft.id } : {}),
+            ...(pendingDraftId ? { evaluationId: pendingDraftId } : {}),
             userId,
           },
         });
@@ -215,9 +217,9 @@ export async function POST(req: Request) {
     await queueEvaluationSubmittedEmail({
       toEmail: customerEmail,
       customerName,
-      evaluationId: pendingDraft?.id ?? null,
+      evaluationId: pendingDraftId,
       userId,
-      submitKey: `${pendingDraft?.id || "no_eval"}:softblock`,
+      submitKey: `${pendingDraftId || "no_eval"}:softblock`,
     });
     return NextResponse.redirect(new URL("/evaluation-submitted", req.url), 303);
   }
