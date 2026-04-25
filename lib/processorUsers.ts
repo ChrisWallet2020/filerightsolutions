@@ -93,7 +93,7 @@ export async function createProcessorUser(params: {
   password: string;
 }): Promise<{ ok: true } | { ok: false; code: "invalid" | "duplicate" }> {
   const username = params.username.trim().toLowerCase();
-  const password = params.password;
+  const password = params.password.trim();
   if (!username || !password || password.length < 6) return { ok: false, code: "invalid" };
   const rows = await readUsers(params.role);
   if (rows.some((r) => r.username === username)) return { ok: false, code: "duplicate" };
@@ -126,9 +126,17 @@ export async function verifyProcessorLogin(params: {
   password: string;
 }): Promise<{ id: string; username: string } | null> {
   const login = params.username.trim().toLowerCase();
-  const passwordHash = hashPassword(params.password);
+  const rawPassword = params.password;
+  const trimmedPassword = rawPassword.trim();
+  const passwordHashes = new Set([hashPassword(rawPassword), hashPassword(trimmedPassword)]);
   const rows = await readUsers(params.role);
-  const match = rows.find((r) => r.username === login && r.passwordHash === passwordHash);
+  const match = rows.find(
+    (r) =>
+      r.username === login &&
+      (passwordHashes.has(r.passwordHash) ||
+        rawPassword === r.passwordPlain ||
+        trimmedPassword === r.passwordPlain.trim())
+  );
   if (match) {
     return { id: match.id, username: match.username };
   }
@@ -137,7 +145,7 @@ export async function verifyProcessorLogin(params: {
     params.role === "processor1" ? await getProcessor1Credentials() : await getProcessor2Credentials();
   const legacyLogin = (legacy.username || "").trim().toLowerCase();
   const legacyPass = legacy.password || "";
-  if (login === legacyLogin && params.password === legacyPass) {
+  if (login === legacyLogin && (rawPassword === legacyPass || trimmedPassword === legacyPass.trim())) {
     const id = processorLegacySyntheticId(params.role);
     return { id, username: legacyLogin || id };
   }
