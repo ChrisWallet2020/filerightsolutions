@@ -14,6 +14,12 @@ import {
   maxScheduledBatchSize,
   retryDelayMinutesForAttempt,
 } from "@/lib/email/policy";
+import {
+  DISPATCH_HEARTBEAT_KEY,
+  DISPATCH_LAST_STATS_KEY,
+  setSiteSettingJson,
+  setSiteSettingString,
+} from "@/lib/email/scheduledEmailHealth";
 
 const CLIENT_TEMPLATE_SCHEDULED_TYPES = new Set<string>([
   "REGISTER_WELCOME",
@@ -138,5 +144,14 @@ export async function processScheduledEmailsBatch(): Promise<ScheduledEmailRunSt
     }
   }
 
-  return { processed: batch.length, sent, suppressed, failed, retried };
+  const stats = { processed: batch.length, sent, suppressed, failed, retried };
+  try {
+    await Promise.all([
+      setSiteSettingString(DISPATCH_HEARTBEAT_KEY, new Date().toISOString()),
+      setSiteSettingJson(DISPATCH_LAST_STATS_KEY, stats),
+    ]);
+  } catch (e) {
+    console.error("SCHEDULED_DISPATCH_HEARTBEAT_WRITE_FAILED", e);
+  }
+  return stats;
 }
