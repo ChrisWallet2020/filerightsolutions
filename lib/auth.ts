@@ -51,7 +51,7 @@ export function isAdminAuthed(): boolean {
   const raw = cookies().get(ADMIN_SESSION_COOKIE)?.value || "";
   const parsed = parseSignedSession(raw);
   if (!parsed) return false;
-  return parsed.payload === config.adminEmail && parsed.signature === sign(parsed.payload);
+  return parsed.payload === config.adminEmail.toLowerCase() && parsed.signature === sign(parsed.payload);
 }
 
 export function setProcessor1Session(username: string) {

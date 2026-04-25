@@ -84,11 +84,38 @@ export default async function ProcessorAccountsPage({
         {sections.map((section) => (
           <section key={section.role} className="adminCard">
             <h2>{titleFor(section.role)}</h2>
-            <form action="/api/admin/processor-accounts" method="post" className="form" style={{ maxWidth: 520, marginTop: 10 }}>
+            <form
+              action="/api/admin/processor-accounts"
+              method="post"
+              autoComplete="off"
+              className="form"
+              style={{ maxWidth: 520, marginTop: 10 }}
+            >
               <input type="hidden" name="role" value={section.role} />
+              <input
+                type="text"
+                name="decoy_processor_username"
+                autoComplete="username"
+                tabIndex={-1}
+                style={{ display: "none" }}
+              />
+              <input
+                type="password"
+                name="decoy_processor_password"
+                autoComplete="current-password"
+                tabIndex={-1}
+                style={{ display: "none" }}
+              />
               <label className="adminLabel">
                 <strong>Username</strong>
-                <input name="username" type="text" autoComplete="off" placeholder="Enter username" required />
+                <input
+                  name="username"
+                  type="text"
+                  autoComplete="new-password"
+                  placeholder="Enter username"
+                  data-lpignore="true"
+                  required
+                />
               </label>
               <label className="adminLabel">
                 <strong>Password</strong>
@@ -96,8 +123,9 @@ export default async function ProcessorAccountsPage({
                   name="password"
                   type="password"
                   minLength={6}
-                  autoComplete="off"
+                  autoComplete="new-password"
                   placeholder="Enter password"
+                  data-lpignore="true"
                   required
                 />
               </label>

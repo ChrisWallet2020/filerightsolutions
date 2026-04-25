@@ -21,7 +21,15 @@ export function AdminLoginForm({
 }: AdminLoginFormProps) {
   const identifierPlaceholder = identifierType === "email" ? "Enter email" : "Enter username";
   return (
-    <form action={action} method="post" className="form" style={{ maxWidth: 420 }}>
+    <form action={action} method="post" autoComplete="off" className="form" style={{ maxWidth: 420 }}>
+      <input type="text" name="decoy_username" autoComplete="username" tabIndex={-1} style={{ display: "none" }} />
+      <input
+        type="password"
+        name="decoy_password"
+        autoComplete="current-password"
+        tabIndex={-1}
+        style={{ display: "none" }}
+      />
       <label>
         {identifierLabel}
         <input
@@ -29,12 +37,20 @@ export function AdminLoginForm({
           type={identifierType}
           required
           placeholder={identifierPlaceholder}
-          autoComplete="off"
+          autoComplete="new-password"
+          data-lpignore="true"
         />
       </label>
       <label>
         Password
-        <input name="password" type="password" required placeholder="Enter password" autoComplete="off" />
+        <input
+          name="password"
+          type="password"
+          required
+          placeholder="Enter password"
+          autoComplete="new-password"
+          data-lpignore="true"
+        />
       </label>
       <SubmitButton className="btn wFull" pendingLabel="Signing in…">
         Login

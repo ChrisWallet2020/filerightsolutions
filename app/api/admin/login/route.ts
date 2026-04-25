@@ -12,12 +12,12 @@ export async function POST(req: Request) {
       email === config.adminEmail.toLowerCase() && password === config.adminPassword;
 
     if (!isValid) {
-      return NextResponse.redirect(new URL("/admin_dashboard/login?error=invalid", req.url));
+      return NextResponse.redirect(new URL("/admin_dashboard/login?error=invalid", req.url), 303);
     }
 
     setAdminSession(email);
-    return NextResponse.redirect(new URL("/admin_dashboard/orders", req.url));
+    return NextResponse.redirect(new URL("/admin_dashboard/orders", req.url), 303);
   } catch {
-    return NextResponse.redirect(new URL("/admin_dashboard/login?error=server", req.url));
+    return NextResponse.redirect(new URL("/admin_dashboard/login?error=server", req.url), 303);
   }
 }
