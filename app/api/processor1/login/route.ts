@@ -9,11 +9,11 @@ export async function POST(req: Request) {
     const password = String(form.get("password") || "");
     const user = await verifyProcessorLogin({ role: "processor1", username, password });
     if (!user) {
-      return NextResponse.redirect(new URL("/processor1_dashboard/login?error=invalid", req.url));
+      return NextResponse.redirect(new URL("/processor1_dashboard/login?error=invalid", req.url), 303);
     }
     setProcessor1SessionForUser(user.id);
-    return NextResponse.redirect(new URL("/processor1_dashboard/evaluations", req.url));
+    return NextResponse.redirect(new URL("/processor1_dashboard/evaluations", req.url), 303);
   } catch {
-    return NextResponse.redirect(new URL("/processor1_dashboard/login?error=server", req.url));
+    return NextResponse.redirect(new URL("/processor1_dashboard/login?error=server", req.url), 303);
   }
 }
