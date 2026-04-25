@@ -88,11 +88,18 @@ export default async function ProcessorAccountsPage({
               <input type="hidden" name="role" value={section.role} />
               <label className="adminLabel">
                 <strong>Username</strong>
-                <input name="username" type="text" autoComplete="username" required />
+                <input name="username" type="text" autoComplete="off" placeholder="Enter username" required />
               </label>
               <label className="adminLabel">
                 <strong>Password</strong>
-                <input name="password" type="password" minLength={6} required />
+                <input
+                  name="password"
+                  type="password"
+                  minLength={6}
+                  autoComplete="off"
+                  placeholder="Enter password"
+                  required
+                />
               </label>
               <button type="submit" className="btn" style={{ width: "fit-content" }}>
                 Add account
